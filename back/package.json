@@ -1,0 +1,26 @@
+{
+  "name": "aer-back",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "bun --hot run src/server.ts",
+    "start": "bun run src/server.ts",
+    "typecheck": "bunx tsc --noEmit",
+    "test": "bun test"
+  },
+  "dependencies": {
+    "@elysiajs/cors": "latest",
+    "@elysiajs/eden": "latest",
+    "@prisma/client": "latest",
+    "arctic": "latest",
+    "elysia": "latest",
+    "jose": "latest",
+    "zod": "latest"
+  },
+  "devDependencies": {
+    "@types/bun": "latest",
+    "prisma": "latest",
+    "typescript": "^5"
+  }
+}
