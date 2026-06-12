@@ -1,0 +1,130 @@
+datasource db {
+  provider = "postgresql"
+  url = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+enum Role {
+  AER
+  ADMIN
+}
+
+// ─── Auth ─────────────────────────────────────────────────────────────────────
+
+model User {
+  id        Int      @id @default(autoincrement())
+  email     String   @unique
+  name      String
+  role      Role     @default(AER)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  guards          Guard[]
+  actionItems     ActionItem[]
+  swapRequests    GuardSwapRequest[] @relation("requester")
+  swapAcceptances GuardSwapRequest[] @relation("accepter")
+  auditLogs       AuditLog[]
+}
+
+model Whitelist {
+  id        Int      @id @default(autoincrement())
+  email     String   @unique
+  role      Role
+  createdAt DateTime @default(now())
+}
+
+
+model Memo {
+  id        Int      @id @default(autoincrement())
+  title     String
+  // Template des 4 sections fixes (Markdown)
+  chosesADire       String @default("")
+  activitesPge      String @default("")
+  activitesBachelor String @default("")
+  autres            String @default("")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  actionItems ActionItem[]
+  @@index([createdAt(sort: Desc)])
+}
+
+model ActionItem {
+  id         Int          @id @default(autoincrement())
+  content    String
+  status     ActionStatus @default(PENDING)
+  deadline   DateTime?
+  createdAt  DateTime     @default(now())
+  updatedAt  DateTime     @updatedAt
+  memo       Memo  @relation(fields: [memoId], references: [id], onDelete: Cascade)
+  memoId     Int
+  assignee   User? @relation(fields: [assigneeId], references: [id])
+  assigneeId Int?
+  @@index([status])
+  @@index([assigneeId])
+}
+
+enum ActionStatus {
+  PENDING
+  IN_PROGRESS
+  DONE
+  CANCELLED
+}
+
+
+model Guard {
+  id        Int      @id @default(autoincrement())
+  date      DateTime @db.Date
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  aer   User? @relation(fields: [aerId], references: [id])
+  aerId Int?
+  swapRequests GuardSwapRequest[] @relation("source")
+  swapTargets  GuardSwapRequest[] @relation("target")
+  @@unique([date])
+  @@index([date])
+}
+
+model GuardSwapRequest {
+  id        Int        @id @default(autoincrement())
+  status    SwapStatus @default(PENDING)
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+  requester   User  @relation("requester", fields: [requesterId], references: [id])
+  requesterId Int
+  accepter    User? @relation("accepter", fields: [accepterId], references: [id])
+  accepterId  Int?
+  sourceGuard   Guard @relation("source", fields: [sourceGuardId], references: [id])
+  sourceGuardId Int
+  targetGuard   Guard @relation("target", fields: [targetGuardId], references: [id])
+  targetGuardId Int
+
+  @@index([requesterId])
+  @@index([status])
+}
+
+enum SwapStatus {
+  PENDING
+  ACCEPTED
+  REJECTED
+  CANCELLED
+}
+
+model AuditLog {
+  id        Int      @id @default(autoincrement())
+  action    String
+  metadata  Json?
+  createdAt DateTime @default(now())
+  user   User @relation(fields: [userId], references: [id])
+  userId Int
+  @@index([userId])
+  @@index([createdAt(sort: Desc)])
+}
+
+// à noter V2 : Suivi étudiants (à activer en v2)
+// Faire la partie mouihihihihi:
+// -> Décommenter les modèles Student, Grade, GradeSnapshot, Project,
+// -> Absence, StudentNote, IntraToken quand la feature sera développée.
+// Statistiques des AER: % guardes, activités, stumpers...
