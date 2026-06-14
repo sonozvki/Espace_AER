@@ -1,0 +1,7 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git -C /Users/aryan/Delivery/AER/Espace_AER diff --cached --name-only)"
+    ]
+  }
+}
