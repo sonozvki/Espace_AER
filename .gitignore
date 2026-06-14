@@ -25,6 +25,7 @@
 *.pem
 notes.txt
 CLAUDE.md
+front/node_modules/
 
 # debug
 npm-debug.log*
