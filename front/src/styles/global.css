@@ -1,0 +1,75 @@
+@font-face {
+  font-family: "Anton";
+  src: url("../assets/fonts/Anton-Regular.ttf") format("truetype");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "IBM Plex Sans";
+  src: url("../assets/fonts/IBMPlexSans-Regular.ttf") format("truetype");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "IBM Plex Sans";
+  src: url("../assets/fonts/IBMPlexSans-Italic.ttf") format("truetype");
+  font-weight: 400;
+  font-style: italic;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "IBM Plex Sans";
+  src: url("../assets/fonts/IBMPlexSans-Bold.ttf") format("truetype");
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "IBM Plex Sans";
+  src: url("../assets/fonts/IBMPlexSans-BoldItalic.ttf") format("truetype");
+  font-weight: 700;
+  font-style: italic;
+  font-display: swap;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  -webkit-font-smoothing: antialiased;
+}
+
+#root {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ─── Design tokens ─────────────────────────────────────────────────────────
+   Semantic aliases sur les variables Mantine (dark scale définie dans theme.ts).
+   Changer dark[] dans theme.ts rethème toute l'app.
+   ─────────────────────────────────────────────────────────────────────────── */
+[data-mantine-color-scheme="dark"] {
+  --epi-bg:      var(--mantine-color-dark-7);   /* #1f1f1f — fond principal    */
+  --epi-panel:   var(--mantine-color-dark-6);   /* #242424 — header/sidebar    */
+  --epi-surface: var(--mantine-color-dark-5);   /* #2a2a2a — cards, inputs     */
+  --epi-border:  var(--mantine-color-dark-4);   /* #3a3a3a — bordures          */
+  --epi-muted:   var(--mantine-color-dark-3);   /* #aaaaaa — texte atténué     */
+  --epi-ghost:   var(--mantine-color-dark-2);   /* #777777 — très atténué      */
+}
+
+:root {
+  --epi-accent:      #809dfd;
+  --epi-accent-dark: #6b8afc;
+}
