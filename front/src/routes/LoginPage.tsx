@@ -1,15 +1,19 @@
-import { useEffect } from "react";
-import { Center, Loader } from "@mantine/core";
+import { Center, Button, Text, Stack } from "@mantine/core";
+import { useNavigate } from "react-router-dom";
 
-// temporary deactivated for easier debug — auto-login via /api/auth/login (dev bypass)
 export function LoginPage() {
-  useEffect(() => {
-    window.location.href = "/api/auth/login";
-  }, []);
+  const navigate = useNavigate();
 
   return (
     <Center h="100vh" bg="dark.7">
-      <Loader color="epitech.4" />
+      <Stack align="center" gap="md">
+        <Text ff="Anton, sans-serif" size="xl" c="epitech.4">
+          Espace AER
+        </Text>
+        <Button onClick={() => navigate("/")}>
+          Se connecter avec Microsoft
+        </Button>
+      </Stack>
     </Center>
   );
 }

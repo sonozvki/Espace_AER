@@ -15,8 +15,9 @@ export function Layout() {
   const location = useLocation();
   const { user, isLoading, isAuthenticated } = useAuth();
 
-  if (isLoading) return null;
-  if (!isAuthenticated) return <Navigate to="/login" replace />;
+  // TODO: re-enable when Microsoft SSO is configured
+  // if (isLoading) return null;
+  // if (!isAuthenticated) return <Navigate to="/login" replace />;
 
   return (
     <AppShell

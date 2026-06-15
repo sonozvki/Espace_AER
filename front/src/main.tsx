@@ -6,7 +6,7 @@ import { RouterProvider } from "react-router-dom";
 import "@mantine/core/styles.css";
 import "@mantine/notifications/styles.css";
 import { theme } from "@/lib/theme";
-import { router } from "@/App";
+import { router } from "@/router";
 
 const queryClient = new QueryClient({
   defaultOptions: {
