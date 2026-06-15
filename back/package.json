@@ -12,14 +12,19 @@
   "dependencies": {
     "@elysiajs/cors": "latest",
     "@elysiajs/eden": "latest",
+    "@prisma/adapter-pg": "latest",
     "@prisma/client": "latest",
     "arctic": "latest",
     "elysia": "latest",
     "jose": "latest",
+    "dotenv": "latest",
+    "pg": "latest",
     "zod": "latest"
   },
   "devDependencies": {
     "@types/bun": "latest",
+    "@types/node": "latest",
+    "@types/pg": "latest",
     "prisma": "latest",
     "typescript": "^5"
   }

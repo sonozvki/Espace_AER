@@ -6,11 +6,11 @@
     "strict": true,
     "noUncheckedIndexedAccess": true,
     "noEmit": true,
-    "types": ["bun-types"],
+    "types": ["bun-types", "node"],
     "baseUrl": ".",
     "paths": {
       "@/*": ["src/*"]
     }
   },
-  "include": ["src/**/*", "tests/**/*"]
+  "include": ["src/**/*", "tests/**/*", "prisma.config.ts"]
 }
