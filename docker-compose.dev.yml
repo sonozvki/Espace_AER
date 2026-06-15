@@ -1,0 +1,85 @@
+# Environnement de développement local
+# Usage : docker compose -f docker-compose.dev.yml up --build
+#
+# La DB est exposée sur localhost:5432 pour Prisma Studio (bunx prisma studio).
+# Le backend tourne avec --hot (rechargement à chaud).
+# Les sources src/ et prisma/ sont montées en volume pour refléter
+# les changements du host sans rebuild.
+#
+# Migrations : relancer le container backend après chaque `bunx prisma migrate dev`
+# exécuté depuis le host (il faut pointer DATABASE_URL vers 127.0.0.1:5432).
+
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: aer-db
+    environment:
+      POSTGRES_DB: aer_dev
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - db-dev:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d aer_dev"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    networks:
+      - back-tier
+    restart: unless-stopped
+
+  backend:
+    build: ./back
+    container_name: aer-backend
+    command: sh -c "bunx prisma generate && bunx prisma migrate deploy && bun --hot src/server.ts"
+    ports:
+      - "8081:8081"
+    environment:
+      NODE_ENV: development
+      DATABASE_URL: postgresql://postgres:postgres@db:5432/aer_dev
+      PORT: 3000
+      JWT_SECRET: dev_jwt_secret_change_in_prod
+      ENCRYPTION_KEY: dev_encryption_key_32_chars_min_!!
+      FRONTEND_URL: http://localhost:5173
+      # OAuth Microsoft — laisser vide si non configuré en dev
+      MICROSOFT_CLIENT_ID: ${MICROSOFT_CLIENT_ID:-}
+      MICROSOFT_CLIENT_SECRET: ${MICROSOFT_CLIENT_SECRET:-}
+      MICROSOFT_REDIRECT_URI: http://localhost:5173/auth/callback
+      MICROSOFT_TENANT_ID: ${MICROSOFT_TENANT_ID:-}
+    volumes:
+      - ./back/src:/app/src
+      - ./back/prisma:/app/prisma
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - back-tier
+      - front-tier
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: ./front
+      target: dev
+    container_name: aer-frontend
+    ports:
+      - "3001:3001"
+    volumes:
+      - ./front/src:/app/src
+    depends_on:
+      - backend
+    networks:
+      - front-tier
+    restart: unless-stopped
+
+networks:
+  back-tier:
+    name: aer-back-dev
+  front-tier:
+    name: aer-front-dev
+
+volumes:
+  db-dev:
+    name: aer-db-dev

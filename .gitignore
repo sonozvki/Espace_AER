@@ -26,6 +26,9 @@
 notes.txt
 CLAUDE.md
 front/node_modules/
+back/node_modules/
+back/prisma/migrations/
+bun.lock
 
 # debug
 npm-debug.log*
