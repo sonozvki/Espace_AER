@@ -16,9 +16,11 @@
     "noFallthroughCasesInSwitch": true,
     "baseUrl": ".",
     "paths": {
-      "@/*": ["./src/*"],
-      "@back/*": ["../back/src/*"]
+      "@/*": ["./src/*", "../back/src/*"],
+      "@back/*": ["../back/src/*"],
+      "elysia": ["../back/node_modules/elysia"],
+      "elysia/*": ["../back/node_modules/elysia/*"]
     }
   },
-  "include": ["src/**/*", "server.ts", "bun-env.d.ts"]
+  "include": ["src/**/*", "vite.config.ts", "vite-env.d.ts"]
 }

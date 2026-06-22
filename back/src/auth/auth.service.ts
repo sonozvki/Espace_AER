@@ -9,15 +9,10 @@ export const microsoft = new MicrosoftEntraId(
   process.env["MICROSOFT_REDIRECT_URI"]!
 );
 
-export async function getAuthorizationUrl(): Promise<{ url: URL; state: string; codeVerifier: string }> {
+export function getAuthorizationUrl(): { url: URL; state: string; codeVerifier: string } {
   const state = crypto.randomUUID();
   const codeVerifier = generateCodeVerifier();
-  const codeChallenge = await generateCodeChallenge(codeVerifier);
-  const url = await microsoft.createAuthorizationURL(state, codeVerifier, {
-    scopes: ["openid", "profile", "email"],
-  });
-  url.searchParams.set("code_challenge", codeChallenge);
-  url.searchParams.set("code_challenge_method", "S256");
+  const url = microsoft.createAuthorizationURL(state, codeVerifier, ["openid", "profile", "email"]);
   return { url, state, codeVerifier };
 }
 
@@ -45,16 +40,6 @@ function generateCodeVerifier(): string {
   const array = new Uint8Array(32);
   crypto.getRandomValues(array);
   return btoa(String.fromCharCode(...array))
-    .replace(/\+/g, "-")
-    .replace(/\//g, "_")
-    .replace(/=/g, "");
-}
-
-async function generateCodeChallenge(verifier: string): Promise<string> {
-  const encoder = new TextEncoder();
-  const data = encoder.encode(verifier);
-  const digest = await crypto.subtle.digest("SHA-256", data);
-  return btoa(String.fromCharCode(...new Uint8Array(digest)))
     .replace(/\+/g, "-")
     .replace(/\//g, "_")
     .replace(/=/g, "");

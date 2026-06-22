@@ -1,9 +1,8 @@
-import { Elysia, t } from "elysia";
+import { Elysia } from "elysia";
 // import { getAuthorizationUrl, handleCallback } from "@/auth/auth.service"; // temporary deactivated for easier debug
 import { createSession, verifySession, sessionCookieOptions, COOKIE } from "@/auth/session";
 import { prisma } from "@/db/prisma";
-
-const STATE_TTL = 600; // 10 minutes
+import { httpStatus } from "@/lib/http";
 
 export const authController = new Elysia({ prefix: "/auth" })
   // temporary deactivated for easier debug — Microsoft OAuth remplacé par un login dev direct
@@ -23,8 +22,7 @@ export const authController = new Elysia({ prefix: "/auth" })
   //   const storedState = cookie["oauth_state"]?.value;
   //   const codeVerifier = cookie["oauth_verifier"]?.value;
   //   if (!storedState || query.state !== storedState || !codeVerifier || !query.code) {
-  //     set.status = 400;
-  //     return { error: "Invalid OAuth state" };
+  //     return httpStatus(400, { error: "Invalid OAuth state" });
   //   }
   //   try {
   //     const user = await handleCallback(query.code, codeVerifier);
@@ -32,27 +30,25 @@ export const authController = new Elysia({ prefix: "/auth" })
   //     cookie[COOKIE]!.set(sessionCookieOptions(token));
   //     set.redirect = process.env["FRONTEND_URL"] ?? "http://localhost:5173";
   //   } catch (err) {
-  //     if (err instanceof Error && err.message === "UNAUTHORIZED") { set.status = 403; return { error: "Email non autorisé" }; }
-  //     set.status = 500;
-  //     return { error: "Erreur d'authentification" };
+  //     if (err instanceof Error && err.message === "UNAUTHORIZED") return httpStatus(403, { error: "Email non autorisé" });
+  //     return httpStatus(500, { error: "Erreur d'authentification" });
   //   }
   // }, { query: t.Object({ code: t.Optional(t.String()), state: t.Optional(t.String()), error: t.Optional(t.String()) }) })
 
-  .get("/me", async ({ cookie, set }) => {
-    const token = cookie[COOKIE]?.value;
-    if (!token) { set.status = 401; return { error: "Non authentifié" }; }
+  .get("/me", async ({ cookie }) => {
+    const token = cookie[COOKIE]?.value as string | undefined;
+    if (!token) return httpStatus(401, { error: "Non authentifié" });
     try {
       const claims = await verifySession(token);
       const user = await prisma.user.findUnique({ where: { id: Number(claims.sub) } });
-      if (!user) { set.status = 401; return { error: "Utilisateur introuvable" }; }
+      if (!user) return httpStatus(401, { error: "Utilisateur introuvable" });
       return { id: user.id, email: user.email, name: user.name, role: user.role };
     } catch {
-      set.status = 401;
-      return { error: "Session invalide" };
+      return httpStatus(401, { error: "Session invalide" });
     }
   })
 
-  .post("/logout", ({ cookie, set }) => {
+  .post("/logout", ({ cookie }) => {
     cookie[COOKIE]!.set({ value: "", maxAge: 0, path: "/" });
-    set.status = 204;
+    return httpStatus(204);
   });

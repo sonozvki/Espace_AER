@@ -4,8 +4,9 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "bun --hot server.ts",
-    "build": "bun build src/main.tsx --outdir dist --target browser",
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
@@ -25,8 +26,11 @@
     "zustand": "^5.0.0"
   },
   "devDependencies": {
+    "@types/node": "^26.0.0",
     "@types/react": "^18",
     "@types/react-dom": "^18",
-    "typescript": "^5"
+    "@vitejs/plugin-react": "^6.0.2",
+    "typescript": "^5",
+    "vite": "^8.0.16"
   }
 }
