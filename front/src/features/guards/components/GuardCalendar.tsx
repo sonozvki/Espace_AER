@@ -156,7 +156,6 @@ function DayCell({ day, guard, currentUser }: DayCellProps) {
         </Stack>
       ) : (
         <Text size="xs" c="dimmed" fs="italic">
-          —
         </Text>
       )}
     </Box>

@@ -33,7 +33,7 @@ export function MemoFormModal({ opened, onClose }: Props) {
         <Stack gap="sm">
           <TextInput
             label="Titre"
-            placeholder="Réunion AER — 23 juin 2026"
+            placeholder="Réunion AER - 15 février 2026"
             value={title}
             onChange={(e) => { setTitle(e.currentTarget.value); setError(""); }}
             error={error}

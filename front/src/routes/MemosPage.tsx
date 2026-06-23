@@ -64,7 +64,7 @@ export function MemosPage() {
           </Center>
         ) : filtered.length === 0 ? (
           <Text c="dimmed" ta="center" py="xl">
-            {search ? "Aucun mémo trouvé" : "Aucun mémo — créez-en un !"}
+            {search ? "Aucun mémo trouvé" : "Aucun mémo, créez-en un !"}
           </Text>
         ) : (
           <Stack gap="xs">

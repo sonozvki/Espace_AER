@@ -1,16 +1,14 @@
 import { Center, Button, Text, Stack } from "@mantine/core";
-import { useNavigate } from "react-router-dom";
+import { BASE_URL } from "@/lib/api";
 
 export function LoginPage() {
-  const navigate = useNavigate();
-
   return (
     <Center h="100vh" bg="dark.7">
       <Stack align="center" gap="md">
         <Text ff="Anton, sans-serif" size="xl" c="epitech.4">
           Espace AER
         </Text>
-        <Button onClick={() => navigate("/")}>
+        <Button component="a" href={`${BASE_URL}/auth/login`}>
           Se connecter avec Microsoft
         </Button>
       </Stack>
