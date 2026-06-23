@@ -22,7 +22,9 @@ export function getAuthorizationUrl(): { url: URL; state: string; codeVerifier: 
 
 export async function handleCallback(code: string, codeVerifier: string) {
   if (!microsoft) throw new Error("Microsoft OAuth not configured");
+  console.log("[auth/service] validateAuthorizationCode start, code:", code.slice(0, 8), "verifier length:", codeVerifier.length);
   const tokens = await microsoft.validateAuthorizationCode(code, codeVerifier);
+  console.log("[auth/service] validateAuthorizationCode success");
   const idToken = tokens.idToken();
 
   const claims = decodeJwtPayload(idToken) as {

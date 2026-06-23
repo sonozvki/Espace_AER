@@ -49,7 +49,7 @@ export const authController = new Elysia({ prefix: "/auth" })
       }
       const storedState = cookie["oauth_state"]?.value as string | undefined;
       const codeVerifier = cookie["oauth_verifier"]?.value as string | undefined;
-      console.log("[auth/callback] storedState:", !!storedState, "verifier:", !!codeVerifier, "stateMatch:", query.state === storedState);
+      console.log("[auth/callback] storedState:", !!storedState, "verifier len:", codeVerifier?.length, "verifier prefix:", codeVerifier?.slice(0, 6), "stateMatch:", query.state === storedState);
       if (!storedState || !codeVerifier || query.state !== storedState || !query.code) {
         return httpStatus(400, { error: "OAuth state invalide" });
       }
