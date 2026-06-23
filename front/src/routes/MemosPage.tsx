@@ -13,15 +13,14 @@ import {
 import { IconPlus, IconSearch } from "@tabler/icons-react";
 import { useMemos, useDeleteMemo } from "@/features/memos/hooks";
 import { MemoCard } from "@/features/memos/components/MemoCard";
-import { MemoFormModal } from "@/features/memos/components/MemoFormModal";
-import { MemoDetailDrawer } from "@/features/memos/components/MemoDetailDrawer";
+import { MemoEditorModal } from "@/features/memos/components/MemoEditorModal";
 
 export function MemosPage() {
   const { data: memos, isLoading } = useMemos();
   const deleteMemo = useDeleteMemo();
 
   const [search, setSearch] = useState("");
-  const [createOpen, setCreateOpen] = useState(false);
+  const [editorOpen, setEditorOpen] = useState(false);
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<number | null>(null);
 
@@ -46,7 +45,7 @@ export function MemosPage() {
           <Title order={2} ff="Anton, sans-serif">
             Mémos
           </Title>
-          <Button leftSection={<IconPlus size={16} />} onClick={() => setCreateOpen(true)}>
+          <Button leftSection={<IconPlus size={16} />} onClick={() => setEditorOpen(true)}>
             Nouveau mémo
           </Button>
         </Group>
@@ -83,12 +82,22 @@ export function MemosPage() {
         )}
       </Stack>
 
-      <MemoFormModal opened={createOpen} onClose={() => setCreateOpen(false)} />
+      {/* Création */}
+      <MemoEditorModal
+        opened={editorOpen && selectedId === null}
+        onClose={() => setEditorOpen(false)}
+      />
 
+      {/* Édition */}
       {selectedId !== null && (
-        <MemoDetailDrawer memoId={selectedId} onClose={() => setSelectedId(null)} />
+        <MemoEditorModal
+          opened
+          onClose={() => setSelectedId(null)}
+          memoId={selectedId}
+        />
       )}
 
+      {/* Confirmation suppression */}
       <Modal
         opened={deleteTarget !== null}
         onClose={() => setDeleteTarget(null)}
