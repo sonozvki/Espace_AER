@@ -13,4 +13,7 @@ export default defineConfig({
     host: true,
     port: 5173,
   },
+  optimizeDeps: {
+    include: ["@uiw/react-md-editor"],
+  },
 });
