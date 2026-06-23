@@ -28,13 +28,12 @@ services:
       NODE_ENV: production
       DATABASE_URL: postgresql://postgres:${DB_PASSWORD}@db:5432/aer_prod
       PORT: 8081
-    ports:
-      - "127.0.0.1:8081:8081"   # même port qu'en dev
     depends_on:
       db:
         condition: service_healthy
     networks:
       - internal
+      - caddy-net   # Caddy accède au backend via ce réseau
     restart: unless-stopped
 
   frontend:
@@ -44,15 +43,16 @@ services:
       args:
         VITE_API_URL: ${VITE_API_URL}
     container_name: aer-frontend-prod
-    ports:
-      - "127.0.0.1:5173:80"    # même port qu'en dev
     networks:
-      - internal
+      - caddy-net   # Caddy accède au frontend via ce réseau
     restart: unless-stopped
 
 networks:
   internal:
-    name: aer-prod
+    name: aer-prod-internal
+  caddy-net:
+    external: true
+    name: gcc-front-prod   # réseau du Caddy GCC existant
 
 volumes:
   db-prod:
