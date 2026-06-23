@@ -55,15 +55,18 @@ export const authController = new Elysia({ prefix: "/auth" })
       }
       try {
         const user = await handleCallback(query.code, codeVerifier);
+        console.log("[auth/callback] user ok:", user.id, user.email);
         const token = await createSession(user);
+        console.log("[auth/callback] session created, setting cookie...");
         cookie[COOKIE]!.set(sessionCookieOptions(token));
+        console.log("[auth/callback] cookie set, redirecting to", FRONTEND);
         set.redirect = FRONTEND;
       } catch (err) {
         if (err instanceof Error && err.message === "UNAUTHORIZED") {
           set.redirect = `${FRONTEND}/login?error=unauthorized`;
           return;
         }
-        console.error("[auth/callback]", err);
+        console.error("[auth/callback] CAUGHT ERROR:", err);
         return httpStatus(500, { error: "Erreur d'authentification" });
       }
     },
