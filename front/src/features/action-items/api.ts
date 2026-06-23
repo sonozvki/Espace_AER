@@ -2,13 +2,13 @@ import { apiFetch } from "@/lib/api";
 import type { ActionItem, CreateActionItemInput, UpdateActionItemInput } from "./types";
 
 export const actionItemsApi = {
-  list: () => apiFetch<ActionItem[]>("/action-items"),
+  list: () => apiFetch<ActionItem[]>("/api/action-items"),
 
   create: (body: CreateActionItemInput) =>
-    apiFetch<ActionItem>("/action-items", { method: "POST", body: JSON.stringify(body) }),
+    apiFetch<ActionItem>("/api/action-items", { method: "POST", body: JSON.stringify(body) }),
 
   update: (id: number, body: UpdateActionItemInput) =>
-    apiFetch<ActionItem>(`/action-items/${id}`, { method: "PATCH", body: JSON.stringify(body) }),
+    apiFetch<ActionItem>(`/api/action-items/${id}`, { method: "PATCH", body: JSON.stringify(body) }),
 
-  delete: (id: number) => apiFetch<void>(`/action-items/${id}`, { method: "DELETE" }),
+  delete: (id: number) => apiFetch<void>(`/api/action-items/${id}`, { method: "DELETE" }),
 };

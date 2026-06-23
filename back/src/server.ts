@@ -17,10 +17,13 @@ export const app = new Elysia()
     })
   )
   .use(authController)
-  .use(memosController)
-  .use(guardsController)
-  .use(actionItemsController)
-  .use(resourcesController)
+  .group("/api", (app) =>
+    app
+      .use(memosController)
+      .use(guardsController)
+      .use(actionItemsController)
+      .use(resourcesController)
+  )
   .listen(process.env["PORT"] ?? 3000);
 
 export type App = typeof app;
