@@ -29,7 +29,7 @@ services:
       DATABASE_URL: postgresql://postgres:${DB_PASSWORD}@db:5432/aer_prod
       PORT: 8081
     ports:
-      - "127.0.0.1:8081:8081"
+      - "127.0.0.1:8081:8081"   # même port qu'en dev
     depends_on:
       db:
         condition: service_healthy
@@ -45,7 +45,7 @@ services:
         VITE_API_URL: ${VITE_API_URL}
     container_name: aer-frontend-prod
     ports:
-      - "127.0.0.1:3080:80"
+      - "127.0.0.1:5173:80"    # même port qu'en dev
     networks:
       - internal
     restart: unless-stopped
