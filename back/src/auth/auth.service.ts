@@ -1,4 +1,4 @@
-import { MicrosoftEntraId } from "arctic";
+import { MicrosoftEntraId, generateCodeVerifier, generateState } from "arctic";
 import { prisma } from "@/db/prisma";
 import { findWhitelistEntry } from "@/auth/whitelist";
 
@@ -14,7 +14,7 @@ const microsoft = process.env["MICROSOFT_CLIENT_ID"]
 
 export function getAuthorizationUrl(): { url: URL; state: string; codeVerifier: string } {
   if (!microsoft) throw new Error("Microsoft OAuth not configured");
-  const state = crypto.randomUUID();
+  const state = generateState();
   const codeVerifier = generateCodeVerifier();
   const url = microsoft.createAuthorizationURL(state, codeVerifier, ["openid", "profile", "email"]);
   return { url, state, codeVerifier };
@@ -41,15 +41,6 @@ export async function handleCallback(code: string, codeVerifier: string) {
     update: { name, role: whitelist.role },
     create: { email, name, role: whitelist.role },
   });
-}
-
-function generateCodeVerifier(): string {
-  const array = new Uint8Array(32);
-  crypto.getRandomValues(array);
-  return btoa(String.fromCharCode(...array))
-    .replace(/\+/g, "-")
-    .replace(/\//g, "_")
-    .replace(/=/g, "");
 }
 
 function decodeJwtPayload(token: string): Record<string, unknown> {

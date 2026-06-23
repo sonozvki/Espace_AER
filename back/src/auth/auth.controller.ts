@@ -42,12 +42,14 @@ export const authController = new Elysia({ prefix: "/auth" })
   .get(
     "/callback",
     async ({ query, cookie, set }) => {
+      console.log("[auth/callback] hit", new Date().toISOString(), "code prefix:", query.code?.slice(0, 8));
       if (query.error) {
         set.redirect = `${FRONTEND}/login?error=${encodeURIComponent(query.error)}`;
         return;
       }
       const storedState = cookie["oauth_state"]?.value as string | undefined;
       const codeVerifier = cookie["oauth_verifier"]?.value as string | undefined;
+      console.log("[auth/callback] storedState:", !!storedState, "verifier:", !!codeVerifier, "stateMatch:", query.state === storedState);
       if (!storedState || !codeVerifier || query.state !== storedState || !query.code) {
         return httpStatus(400, { error: "OAuth state invalide" });
       }
