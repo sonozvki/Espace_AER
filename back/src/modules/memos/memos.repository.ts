@@ -3,17 +3,11 @@ import type { CreateMemoInput, UpdateMemoInput } from "./memos.schemas";
 
 export const memosRepository = {
   findAll() {
-    return prisma.memo.findMany({
-      orderBy: { createdAt: "desc" },
-      include: { actionItems: { include: { assignee: true } } },
-    });
+    return prisma.memo.findMany({ orderBy: { createdAt: "desc" } });
   },
 
   findById(id: number) {
-    return prisma.memo.findUnique({
-      where: { id },
-      include: { actionItems: { include: { assignee: true } } },
-    });
+    return prisma.memo.findUnique({ where: { id } });
   },
 
   create(data: CreateMemoInput) {

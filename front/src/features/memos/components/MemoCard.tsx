@@ -1,4 +1,4 @@
-import { Paper, Group, Text, Badge, Stack, ActionIcon } from "@mantine/core";
+import { Paper, Group, Text, Stack, ActionIcon } from "@mantine/core";
 import { IconTrash } from "@tabler/icons-react";
 import type { Memo } from "../types";
 
@@ -24,8 +24,6 @@ function previewText(text: string, max = 100) {
 }
 
 export function MemoCard({ memo, onClick, onDelete }: Props) {
-  const pendingCount = memo.actionItems.filter((a) => a.status === "PENDING").length;
-
   return (
     <Paper
       p="md"
@@ -39,11 +37,6 @@ export function MemoCard({ memo, onClick, onDelete }: Props) {
             <Text fw={600} size="sm" truncate>
               {memo.title}
             </Text>
-            {pendingCount > 0 && (
-              <Badge size="xs" color="orange" variant="light">
-                {pendingCount} action{pendingCount > 1 ? "s" : ""}
-              </Badge>
-            )}
           </Group>
           <Text size="xs" c="dimmed">
             {formatDate(memo.createdAt)}
