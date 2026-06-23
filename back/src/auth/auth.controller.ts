@@ -41,7 +41,7 @@ export const authController = new Elysia({ prefix: "/auth" })
 
   .get(
     "/callback",
-    async ({ query, cookie, set }) => {
+    async ({ query, cookie, set, redirect }) => {
       console.log("[auth/callback] hit", new Date().toISOString(), "code prefix:", query.code?.slice(0, 8));
       if (query.error) {
         set.redirect = `${FRONTEND}/login?error=${encodeURIComponent(query.error)}`;
@@ -60,7 +60,7 @@ export const authController = new Elysia({ prefix: "/auth" })
         console.log("[auth/callback] session created, setting cookie...");
         cookie[COOKIE]!.set(sessionCookieOptions(token));
         console.log("[auth/callback] cookie set, redirecting to", FRONTEND);
-        set.redirect = FRONTEND;
+        return redirect(FRONTEND);
       } catch (err) {
         if (err instanceof Error && err.message === "UNAUTHORIZED") {
           set.redirect = `${FRONTEND}/login?error=unauthorized`;
