@@ -3,7 +3,7 @@ import { Layout } from "@/components/Layout";
 import { LoginPage } from "@/routes/LoginPage";
 import { MemosPage } from "@/routes/MemosPage";
 import { GuardsPage } from "@/routes/GuardsPage";
-import { ActionItemsPage } from "@/routes/ActionItemsPage";
+import { ToolboxPage } from "@/routes/ToolboxPage";
 import "@/styles/global.css";
 
 export const router = createBrowserRouter([
@@ -18,7 +18,7 @@ export const router = createBrowserRouter([
       { index: true, element: <Navigate to="/memos" replace /> },
       { path: "memos", element: <MemosPage /> },
       { path: "guards", element: <GuardsPage /> },
-      { path: "action-items", element: <ActionItemsPage /> },
+      { path: "toolbox", element: <ToolboxPage /> },
     ],
   },
   {

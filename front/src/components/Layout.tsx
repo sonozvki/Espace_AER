@@ -7,7 +7,7 @@ import { BASE_URL } from "@/lib/api";
 const NAV_ITEMS = [
   { path: "/memos", label: "Mémos" },
   { path: "/guards", label: "Gardes" },
-  { path: "/action-items", label: "Actions" },
+  { path: "/toolbox", label: "Toolbox" },
 ];
 
 export function Layout() {
