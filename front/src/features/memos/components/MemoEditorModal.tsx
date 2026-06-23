@@ -5,12 +5,12 @@ import { useMemo, useCreateMemo, useUpdateMemo } from "../hooks";
 
 const DEFAULT_TEMPLATE = `## Les gardes
 
-- Lundi   :
-- Mardi   :
-- Mercredi:
-- Jeudi   :
-- Vendredi:
-- Samedi  :
+- Lundi :
+- Mardi :
+- Mercredi :
+- Jeudi :
+- Vendredi :
+- Samedi :
 
 ## Activités PGE
 
