@@ -16,10 +16,7 @@ export type ActionItem = {
 export type Memo = {
   id: number;
   title: string;
-  chosesADire: string;
-  activitesPge: string;
-  activitesBachelor: string;
-  autres: string;
+  content: string;
   createdAt: string;
   updatedAt: string;
   actionItems: ActionItem[];
@@ -27,8 +24,5 @@ export type Memo = {
 
 export type CreateMemoInput = {
   title: string;
-  chosesADire: string;
-  activitesPge: string;
-  activitesBachelor: string;
-  autres: string;
+  content: string;
 };

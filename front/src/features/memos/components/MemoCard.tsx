@@ -17,9 +17,10 @@ function formatDate(iso: string) {
   });
 }
 
-function previewText(text: string, max = 80) {
-  const stripped = text.replace(/[#*_`>-]/g, "").trim();
-  return stripped.length > max ? stripped.slice(0, max) + "…" : stripped || null;
+function previewText(text: string, max = 100) {
+  const stripped = text.replace(/#{1,6}\s/g, "").replace(/[*_`>-]/g, "").trim();
+  const firstLine = stripped.split("\n").find((l) => l.trim().length > 0) ?? "";
+  return firstLine.length > max ? firstLine.slice(0, max) + "…" : firstLine || null;
 }
 
 export function MemoCard({ memo, onClick, onDelete }: Props) {
@@ -47,9 +48,9 @@ export function MemoCard({ memo, onClick, onDelete }: Props) {
           <Text size="xs" c="dimmed">
             {formatDate(memo.createdAt)}
           </Text>
-          {previewText(memo.chosesADire) && (
+          {previewText(memo.content) && (
             <Text size="xs" c="dimmed" lineClamp={1}>
-              {previewText(memo.chosesADire)}
+              {previewText(memo.content)}
             </Text>
           )}
         </Stack>

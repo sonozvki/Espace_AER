@@ -37,11 +37,7 @@ model Whitelist {
 model Memo {
   id        Int      @id @default(autoincrement())
   title     String
-  // Template des 4 sections fixes (Markdown)
-  chosesADire       String @default("")
-  activitesPge      String @default("")
-  activitesBachelor String @default("")
-  autres            String @default("")
+  content   String   @default("")
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   actionItems ActionItem[]

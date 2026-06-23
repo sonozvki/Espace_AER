@@ -1,17 +1,26 @@
-import { Modal, TextInput, Button, Group, Tabs, Text, Loader, Center, Stack } from "@mantine/core";
+import { Modal, TextInput, Button, Group, Text, Loader, Center, Stack } from "@mantine/core";
 import { useState, useEffect } from "react";
 import MDEditor from "@uiw/react-md-editor";
 import { useMemo, useCreateMemo, useUpdateMemo } from "../hooks";
 
-const SECTIONS = [
-  { key: "chosesADire" as const, label: "Choses à dire" },
-  { key: "activitesPge" as const, label: "Activités PGE" },
-  { key: "activitesBachelor" as const, label: "Activités Bachelor" },
-  { key: "autres" as const, label: "Autres" },
-];
+const DEFAULT_TEMPLATE = `## Les gardes
 
-type SectionKey = (typeof SECTIONS)[number]["key"];
-type Fields = { title: string } & Record<SectionKey, string>;
+- Lundi   :
+- Mardi   :
+- Mercredi:
+- Jeudi   :
+- Vendredi:
+- Samedi  :
+
+## Activités PGE
+
+
+## Activités Bachelor
+
+
+## Autres
+
+`;
 
 function todayTitle() {
   const s = new Date().toLocaleDateString("fr-FR", {
@@ -26,7 +35,6 @@ function todayTitle() {
 interface Props {
   opened: boolean;
   onClose: () => void;
-  /** Si fourni : mode édition. Sinon : mode création. */
   memoId?: number | null;
 }
 
@@ -36,49 +44,28 @@ export function MemoEditorModal({ opened, onClose, memoId }: Props) {
   const createMemo = useCreateMemo();
   const updateMemo = useUpdateMemo();
 
-  const [fields, setFields] = useState<Fields>({
-    title: todayTitle(),
-    chosesADire: "",
-    activitesPge: "",
-    activitesBachelor: "",
-    autres: "",
-  });
+  const [title, setTitle] = useState(todayTitle());
+  const [content, setContent] = useState(DEFAULT_TEMPLATE);
   const [titleError, setTitleError] = useState("");
 
-  // En mode édition, charger les données dès que le mémo est disponible
   useEffect(() => {
     if (isEdit && memo) {
-      setFields({
-        title: memo.title,
-        chosesADire: memo.chosesADire,
-        activitesPge: memo.activitesPge,
-        activitesBachelor: memo.activitesBachelor,
-        autres: memo.autres,
-      });
+      setTitle(memo.title);
+      setContent(memo.content);
     }
   }, [memo?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // En mode création, reset à chaque ouverture
   useEffect(() => {
     if (opened && !isEdit) {
-      setFields({ title: todayTitle(), chosesADire: "", activitesPge: "", activitesBachelor: "", autres: "" });
+      setTitle(todayTitle());
+      setContent(DEFAULT_TEMPLATE);
       setTitleError("");
     }
   }, [opened, isEdit]);
 
-  function set(key: keyof Fields, val: string) {
-    setFields((f) => ({ ...f, [key]: val }));
-  }
-
   function handleSave() {
-    if (!fields.title.trim()) { setTitleError("Titre requis"); return; }
-    const data = {
-      title: fields.title.trim(),
-      chosesADire: fields.chosesADire,
-      activitesPge: fields.activitesPge,
-      activitesBachelor: fields.activitesBachelor,
-      autres: fields.autres,
-    };
+    if (!title.trim()) { setTitleError("Titre requis"); return; }
+    const data = { title: title.trim(), content };
     if (isEdit && memoId) {
       updateMemo.mutate({ id: memoId, data }, { onSuccess: onClose });
     } else {
@@ -95,7 +82,13 @@ export function MemoEditorModal({ opened, onClose, memoId }: Props) {
       title={isEdit ? "Modifier le mémo" : "Nouveau mémo"}
       size="calc(100vw - 40px)"
       styles={{
-        body: { display: "flex", flexDirection: "column", height: "calc(100vh - 120px)", padding: 0 },
+        body: {
+          display: "flex",
+          flexDirection: "column",
+          height: "calc(100vh - 120px)",
+          padding: 0,
+          overflow: "hidden",
+        },
         content: { display: "flex", flexDirection: "column" },
       }}
     >
@@ -105,43 +98,27 @@ export function MemoEditorModal({ opened, onClose, memoId }: Props) {
         <Stack gap="md" style={{ flex: 1, overflow: "hidden", padding: "16px 24px" }}>
           <TextInput
             label="Titre"
-            value={fields.title}
-            onChange={(e) => { set("title", e.currentTarget.value); setTitleError(""); }}
+            value={title}
+            onChange={(e) => { setTitle(e.currentTarget.value); setTitleError(""); }}
             error={titleError}
             size="md"
             styles={{ input: { fontFamily: '"Anton", sans-serif', fontSize: 18 } }}
           />
 
-          <Tabs
-            defaultValue="chosesADire"
-            style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden" }}
-            styles={{ panel: { flex: 1, overflow: "auto", paddingTop: 12 } }}
-          >
-            <Tabs.List>
-              {SECTIONS.map((s) => (
-                <Tabs.Tab key={s.key} value={s.key}>
-                  {s.label}
-                </Tabs.Tab>
-              ))}
-            </Tabs.List>
+          <Text size="xs" c="dimmed">
+            Markdown supporté — aperçu en temps réel à droite.
+          </Text>
 
-            {SECTIONS.map((s) => (
-              <Tabs.Panel key={s.key} value={s.key}>
-                <Text size="xs" c="dimmed" mb={6}>
-                  Markdown supporté — l'aperçu s'affiche en temps réel à droite.
-                </Text>
-                <div data-color-mode="dark">
-                  <MDEditor
-                    value={fields[s.key]}
-                    onChange={(v) => set(s.key, v ?? "")}
-                    preview="live"
-                    height={400}
-                    style={{ background: "var(--epi-surface)" }}
-                  />
-                </div>
-              </Tabs.Panel>
-            ))}
-          </Tabs>
+          <div data-color-mode="dark" style={{ flex: 1, overflow: "hidden" }}>
+            <MDEditor
+              value={content}
+              onChange={(v) => setContent(v ?? "")}
+              preview="live"
+              height="100%"
+              style={{ height: "100%" }}
+              visibleDragbar={false}
+            />
+          </div>
 
           <Group
             justify="flex-end"

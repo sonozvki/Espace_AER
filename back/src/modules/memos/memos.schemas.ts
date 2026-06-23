@@ -2,10 +2,7 @@ import { z } from "zod";
 
 export const CreateMemoSchema = z.object({
   title: z.string().min(1).max(200),
-  chosesADire: z.string().default(""),
-  activitesPge: z.string().default(""),
-  activitesBachelor: z.string().default(""),
-  autres: z.string().default(""),
+  content: z.string().default(""),
 });
 
 export const UpdateMemoSchema = CreateMemoSchema.partial();
