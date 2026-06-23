@@ -42,11 +42,11 @@ services:
       PORT: 8081
       JWT_SECRET: dev_jwt_secret_change_in_prod
       ENCRYPTION_KEY: dev_encryption_key_32_chars_min_!!
-      FRONTEND_URL: http://localhost:3001
+      FRONTEND_URL: http://localhost:5173
       # OAuth Microsoft — laisser vide si non configuré en dev
       MICROSOFT_CLIENT_ID: ${MICROSOFT_CLIENT_ID:-}
       MICROSOFT_CLIENT_SECRET: ${MICROSOFT_CLIENT_SECRET:-}
-      MICROSOFT_REDIRECT_URI: http://localhost:3001/auth/callback
+      MICROSOFT_REDIRECT_URI: http://localhost:5173/auth/callback
       MICROSOFT_TENANT_ID: ${MICROSOFT_TENANT_ID:-}
     volumes:
       - ./back/src:/app/src
