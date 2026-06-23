@@ -1,0 +1,45 @@
+name: Deploy to production
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  typecheck:
+    name: Typecheck
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: oven-sh/setup-bun@v2
+
+      - name: Typecheck backend
+        working-directory: back
+        run: |
+          bun install
+          bunx prisma generate
+          bun run typecheck
+
+      - name: Typecheck frontend
+        working-directory: front
+        run: |
+          bun install
+          bun run typecheck
+
+  deploy:
+    name: Deploy
+    runs-on: ubuntu-latest
+    needs: typecheck
+    steps:
+      - name: SSH → VPS → deploy
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USERNAME }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          script: |
+            cd /opt/espace-aer
+            git pull origin main
+            docker compose -f docker-compose.prod.yml --env-file .env.prod up --build -d
+            docker image prune -f
