@@ -4,6 +4,7 @@ import { authController } from "@/auth/auth.controller";
 import { memosController } from "@/modules/memos/memos.controller";
 import { guardsController } from "@/modules/guards/guards.controller";
 import { actionItemsController } from "@/modules/action-items/action-items.controller";
+import { resourcesController } from "@/modules/resources/resources.controller";
 
 export const app = new Elysia()
   .use(
@@ -16,6 +17,7 @@ export const app = new Elysia()
   .use(memosController)
   .use(guardsController)
   .use(actionItemsController)
+  .use(resourcesController)
   .listen(process.env["PORT"] ?? 3000);
 
 export type App = typeof app;
