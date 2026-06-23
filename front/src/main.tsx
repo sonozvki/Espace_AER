@@ -5,7 +5,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { RouterProvider } from "react-router-dom";
 import "@mantine/core/styles.css";
 import "@mantine/notifications/styles.css";
-import "@uiw/react-md-editor/dist/mdeditor.min.css";
+import "@uiw/react-md-editor/markdown-editor.css";
 import { theme } from "@/lib/theme";
 import { router } from "@/router";
 
