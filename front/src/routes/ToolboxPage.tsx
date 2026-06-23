@@ -39,7 +39,7 @@ export function ToolboxPage() {
 
       {!isLoading && (resources ?? []).length === 0 && (
         <Center h={200}>
-          <Text c="dimmed">Aucune ressource — ajoutez des liens utiles pour toute l'équipe.</Text>
+          <Text c="dimmed">Aucune ressource, ajoutez des liens utiles pour toute l'équipe.</Text>
         </Center>
       )}
 

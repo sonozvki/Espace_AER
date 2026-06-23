@@ -36,18 +36,18 @@ services:
     command: sh -c "bunx prisma generate && bunx prisma migrate deploy && bun --hot src/server.ts"
     ports:
       - "8081:8081"
+    env_file:
+      - ./back/.env            # charge MICROSOFT_CLIENT_ID/SECRET/TENANT_ID
     environment:
+      # Ces valeurs surchargent celles du .env pour Docker
       NODE_ENV: development
       DATABASE_URL: postgresql://postgres:postgres@db:5432/aer_dev
       PORT: 8081
       JWT_SECRET: dev_jwt_secret_change_in_prod
       ENCRYPTION_KEY: dev_encryption_key_32_chars_min_!!
       FRONTEND_URL: http://localhost:5173
-      # OAuth Microsoft — laisser vide si non configuré en dev
-      MICROSOFT_CLIENT_ID: ${MICROSOFT_CLIENT_ID:-}
-      MICROSOFT_CLIENT_SECRET: ${MICROSOFT_CLIENT_SECRET:-}
-      MICROSOFT_REDIRECT_URI: http://localhost:5173/auth/callback
-      MICROSOFT_TENANT_ID: ${MICROSOFT_TENANT_ID:-}
+      MICROSOFT_REDIRECT_URI: http://localhost:8081/auth/callback
+      # WHITELIST_ADMINS et WHITELIST_AERS chargés depuis back/.env via env_file
     volumes:
       - ./back/src:/app/src
       - ./back/prisma:/app/prisma

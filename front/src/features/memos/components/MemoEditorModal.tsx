@@ -117,7 +117,7 @@ export function MemoEditorModal({ opened, onClose, memoId }: Props) {
           />
 
           <Text size="xs" c="dimmed">
-            Markdown supporté — aperçu en temps réel à droite.
+            Markdown supporté, aperçu en temps réel à droite.
           </Text>
 
           <div data-color-mode="dark" style={{ flex: 1, overflow: "hidden" }}>
