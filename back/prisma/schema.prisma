@@ -120,7 +120,7 @@ model Resource {
   title       String
   url         String
   description String   @default("")
-  category    String   @default("Général")
+  category    String   @default("Divers")
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 }
