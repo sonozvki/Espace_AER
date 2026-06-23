@@ -61,6 +61,7 @@ export const authController = new Elysia({ prefix: "/auth" })
           set.redirect = `${FRONTEND}/login?error=unauthorized`;
           return;
         }
+        console.error("[auth/callback]", err);
         return httpStatus(500, { error: "Erreur d'authentification" });
       }
     },
