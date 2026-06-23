@@ -17,6 +17,7 @@ export function getAuthorizationUrl(): { url: URL; state: string; codeVerifier: 
   const state = generateState();
   const codeVerifier = generateCodeVerifier();
   const url = microsoft.createAuthorizationURL(state, codeVerifier, ["openid", "profile", "email"]);
+  console.log("[auth/service] authorization URL params:", Object.fromEntries(url.searchParams));
   return { url, state, codeVerifier };
 }
 
