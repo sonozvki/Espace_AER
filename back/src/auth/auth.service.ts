@@ -26,6 +26,7 @@ export async function handleCallback(code: string, codeVerifier: string) {
   const tokens = await microsoft.validateAuthorizationCode(code, codeVerifier);
   console.log("[auth/service] validateAuthorizationCode success");
   const idToken = tokens.idToken();
+  console.log("[auth/service] idToken present:", !!idToken);
 
   const claims = decodeJwtPayload(idToken) as {
     email?: string;
@@ -34,8 +35,10 @@ export async function handleCallback(code: string, codeVerifier: string) {
   };
   const email = claims.email ?? claims.preferred_username ?? "";
   const name = claims.name ?? email;
+  console.log("[auth/service] email:", email, "name:", name);
 
   const whitelist = await findWhitelistEntry(email);
+  console.log("[auth/service] whitelist entry:", whitelist?.role ?? "NOT FOUND");
   if (!whitelist) throw new Error("UNAUTHORIZED");
 
   return prisma.user.upsert({
