@@ -1,6 +1,16 @@
-import { Drawer, Stack, TextInput, Button, Group, Tabs, Textarea, Text, Loader, Center } from "@mantine/core";
-import { useForm } from "@mantine/form";
-import { useEffect } from "react";
+import {
+  Drawer,
+  Stack,
+  TextInput,
+  Button,
+  Group,
+  Tabs,
+  Textarea,
+  Text,
+  Loader,
+  Center,
+} from "@mantine/core";
+import { useState, useEffect } from "react";
 import { useMemo, useUpdateMemo } from "../hooks";
 
 const SECTIONS = [
@@ -9,6 +19,9 @@ const SECTIONS = [
   { key: "activitesBachelor" as const, label: "Activités Bachelor" },
   { key: "autres" as const, label: "Autres" },
 ];
+
+type SectionKey = (typeof SECTIONS)[number]["key"];
+type FormValues = { title: string } & Record<SectionKey, string>;
 
 interface Props {
   memoId: number;
@@ -19,19 +32,17 @@ export function MemoDetailDrawer({ memoId, onClose }: Props) {
   const { data: memo, isLoading } = useMemo(memoId);
   const updateMemo = useUpdateMemo();
 
-  const form = useForm({
-    initialValues: {
-      title: "",
-      chosesADire: "",
-      activitesPge: "",
-      activitesBachelor: "",
-      autres: "",
-    },
+  const [values, setValues] = useState<FormValues>({
+    title: "",
+    chosesADire: "",
+    activitesPge: "",
+    activitesBachelor: "",
+    autres: "",
   });
 
   useEffect(() => {
     if (memo) {
-      form.setValues({
+      setValues({
         title: memo.title,
         chosesADire: memo.chosesADire,
         activitesPge: memo.activitesPge,
@@ -39,11 +50,14 @@ export function MemoDetailDrawer({ memoId, onClose }: Props) {
         autres: memo.autres,
       });
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [memo?.id]);
+  }, [memo?.id]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  function set(key: keyof FormValues, val: string) {
+    setValues((v) => ({ ...v, [key]: val }));
+  }
 
   function handleSave() {
-    updateMemo.mutate({ id: memoId, data: form.values });
+    updateMemo.mutate({ id: memoId, data: values });
   }
 
   return (
@@ -57,7 +71,8 @@ export function MemoDetailDrawer({ memoId, onClose }: Props) {
           variant="unstyled"
           fw={600}
           size="md"
-          {...form.getInputProps("title")}
+          value={values.title}
+          onChange={(e) => set("title", e.currentTarget.value)}
           style={{ width: 360 }}
         />
       }
@@ -67,7 +82,7 @@ export function MemoDetailDrawer({ memoId, onClose }: Props) {
           <Loader />
         </Center>
       ) : (
-        <Stack gap="md" h="100%" style={{ overflow: "auto" }}>
+        <Stack gap="md" style={{ height: "100%", overflow: "auto" }}>
           <Tabs defaultValue="chosesADire" variant="outline">
             <Tabs.List>
               {SECTIONS.map((s) => (
@@ -86,7 +101,8 @@ export function MemoDetailDrawer({ memoId, onClose }: Props) {
                   </Tabs.List>
                   <Tabs.Panel value="edit">
                     <Textarea
-                      {...form.getInputProps(s.key)}
+                      value={values[s.key]}
+                      onChange={(e) => set(s.key, e.currentTarget.value)}
                       autosize
                       minRows={8}
                       maxRows={20}
@@ -108,7 +124,7 @@ export function MemoDetailDrawer({ memoId, onClose }: Props) {
                         color: "var(--mantine-color-gray-3)",
                       }}
                     >
-                      {form.values[s.key] || (
+                      {values[s.key] || (
                         <span style={{ color: "var(--epi-ghost)" }}>Aucun contenu</span>
                       )}
                     </Text>
@@ -118,7 +134,12 @@ export function MemoDetailDrawer({ memoId, onClose }: Props) {
             ))}
           </Tabs>
 
-          <Group justify="flex-end" mt="auto" pt="md" style={{ borderTop: "1px solid var(--epi-border)" }}>
+          <Group
+            justify="flex-end"
+            mt="auto"
+            pt="md"
+            style={{ borderTop: "1px solid var(--epi-border)" }}
+          >
             <Button variant="default" onClick={onClose}>
               Fermer
             </Button>
