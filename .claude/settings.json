@@ -1,7 +1,8 @@
 {
   "permissions": {
     "allow": [
-      "WebFetch(domain:cyberryteam.github.io)"
+      "WebFetch(domain:cyberryteam.github.io)",
+      "Bash(gh api *)"
     ]
   }
 }

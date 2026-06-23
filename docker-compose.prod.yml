@@ -1,19 +1,59 @@
 services:
   db:
     image: postgres:16-alpine
+    container_name: aer-db-prod
     environment:
-      POSTGRES_USER: ${POSTGRES_USER:-postgres}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
-      POSTGRES_DB: ${POSTGRES_DB:-aer_db}
-    ports:
-      - "5432:5432"
+      POSTGRES_DB: aer_prod
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
     volumes:
-      - db-data:/var/lib/postgresql/data
+      - db-prod:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      test: ["CMD-SHELL", "pg_isready -U postgres -d aer_prod"]
       interval: 5s
-      timeout: 5s
+      timeout: 3s
       retries: 5
+    networks:
+      - internal
+    restart: unless-stopped
+
+  backend:
+    build:
+      context: ./back
+      target: prod
+    container_name: aer-backend-prod
+    env_file:
+      - .env.prod
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: postgresql://postgres:${DB_PASSWORD}@db:5432/aer_prod
+      PORT: 8081
+    ports:
+      - "127.0.0.1:8081:8081"
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - internal
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: ./front
+      target: prod
+      args:
+        VITE_API_URL: ${VITE_API_URL}
+    container_name: aer-frontend-prod
+    ports:
+      - "127.0.0.1:3080:80"
+    networks:
+      - internal
+    restart: unless-stopped
+
+networks:
+  internal:
+    name: aer-prod
 
 volumes:
-  db-data:
+  db-prod:
+    name: aer-db-prod
