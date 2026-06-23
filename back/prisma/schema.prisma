@@ -115,6 +115,16 @@ model AuditLog {
   @@index([createdAt(sort: Desc)])
 }
 
+model Resource {
+  id          Int      @id @default(autoincrement())
+  title       String
+  url         String
+  description String   @default("")
+  category    String   @default("Général")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
 // à noter V2 : Suivi étudiants (à activer en v2)
 // Faire la partie mouihihihihi:
 // -> Décommenter les modèles Student, Grade, GradeSnapshot, Project,

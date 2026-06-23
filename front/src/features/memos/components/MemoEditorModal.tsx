@@ -3,6 +3,17 @@ import { useState, useEffect } from "react";
 import MDEditor from "@uiw/react-md-editor";
 import { useMemo, useCreateMemo, useUpdateMemo } from "../hooks";
 
+// autre template
+// | Jour        | AER |
+// |-------------|-----|
+// | Lundi       |     |
+// | Mardi       |     |
+// | Mercredi    |     |
+// | Jeudi       |     |
+// | Vendredi    |     |
+// | Samedi      |     |
+
+
 const DEFAULT_TEMPLATE = `## Les gardes
 
 - Lundi :
