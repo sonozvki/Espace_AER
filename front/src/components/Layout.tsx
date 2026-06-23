@@ -1,7 +1,8 @@
-import { AppShell, Burger, Group, NavLink, Text, UnstyledButton } from "@mantine/core";
+import { AppShell, Burger, Group, NavLink, Text } from "@mantine/core";
 import { useDisclosure } from "@mantine/hooks";
-import { Outlet, useNavigate, useLocation, Navigate } from "react-router-dom";
+import { Outlet, useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
+import { BASE_URL } from "@/lib/api";
 
 const NAV_ITEMS = [
   { path: "/memos", label: "Mémos" },
@@ -13,11 +14,12 @@ export function Layout() {
   const [opened, { toggle }] = useDisclosure();
   const navigate = useNavigate();
   const location = useLocation();
-  const { user, isLoading, isAuthenticated } = useAuth();
+  const { user } = useAuth();
 
-  // TODO: re-enable when Microsoft SSO is configured
-  // if (isLoading) return null;
-  // if (!isAuthenticated) return <Navigate to="/login" replace />;
+  async function handleLogout() {
+    await fetch(`${BASE_URL}/auth/logout`, { method: "POST", credentials: "include" });
+    navigate("/login");
+  }
 
   return (
     <AppShell
@@ -54,10 +56,7 @@ export function Layout() {
           label="Se déconnecter"
           mt="auto"
           c="red"
-          onClick={async () => {
-            await fetch("/api/auth/logout", { method: "POST", credentials: "include" });
-            navigate("/login");
-          }}
+          onClick={handleLogout}
         />
       </AppShell.Navbar>
 
