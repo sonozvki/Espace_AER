@@ -8,6 +8,7 @@ const NAV_ITEMS = [
   { path: "/memos", label: "Mémos" },
   { path: "/guards", label: "Gardes" },
   { path: "/toolbox", label: "Toolbox" },
+  { path: "/whitelist", label: "Whitelist" },
 ];
 
 export function Layout() {

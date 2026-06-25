@@ -1,95 +1,72 @@
 import { useState } from "react";
 import {
-  Stack,
-  Group,
-  Title,
-  Button,
-  Loader,
-  Center,
-  Modal,
-  Select,
-  TextInput,
-  Text,
+  Stack, Group, Title, Button, Loader, Center,
+  Modal, Select, TextInput, Text,
 } from "@mantine/core";
+import { useForm } from "@mantine/form";
 import { IconPlus } from "@tabler/icons-react";
 import { useActionItems, useCreateActionItem } from "@/features/action-items/hooks";
 import { ActionItemList } from "@/features/action-items/components/ActionItemList";
 import { useMemos } from "@/features/memos/hooks";
 import { useUsers } from "@/features/guards/hooks";
 
-function CreateActionItemModal({
-  opened,
-  onClose,
-}: {
-  opened: boolean;
-  onClose: () => void;
-}) {
+function CreateActionItemModal({ opened, onClose }: { opened: boolean; onClose: () => void }) {
   const create = useCreateActionItem();
   const { data: memos } = useMemos();
   const { data: users } = useUsers();
 
-  const [memoId, setMemoId] = useState<string | null>(null);
-  const [content, setContent] = useState("");
-  const [assigneeId, setAssigneeId] = useState<string | null>(null);
-  const [deadline, setDeadline] = useState("");
-  const [errors, setErrors] = useState<{ memoId?: string; content?: string }>({});
+  const form = useForm({
+    initialValues: {
+      memoId: null as string | null,
+      content: "",
+      assigneeId: null as string | null,
+      deadline: "",
+    },
+    validate: {
+      memoId: (v) => v ? null : "Mémo requis",
+      content: (v) => v.trim() ? null : "Contenu requis",
+    },
+  });
 
-  function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    const newErrors: typeof errors = {};
-    if (!memoId) newErrors.memoId = "Mémo requis";
-    if (!content.trim()) newErrors.content = "Contenu requis";
-    if (Object.keys(newErrors).length > 0) { setErrors(newErrors); return; }
-
+  function handleSubmit(values: typeof form.values) {
     create.mutate(
       {
-        memoId: Number(memoId),
-        content: content.trim(),
-        assigneeId: assigneeId ? Number(assigneeId) : undefined,
-        deadline: deadline || undefined,
+        memoId: Number(values.memoId),
+        content: values.content.trim(),
+        assigneeId: values.assigneeId ? Number(values.assigneeId) : undefined,
+        deadline: values.deadline || undefined,
       },
-      {
-        onSuccess: () => {
-          setMemoId(null); setContent(""); setAssigneeId(null); setDeadline(""); setErrors({});
-          onClose();
-        },
-      }
+      { onSuccess: () => { form.reset(); onClose(); } }
     );
   }
 
   return (
     <Modal opened={opened} onClose={onClose} title="Nouvelle action" size="sm">
-      <form onSubmit={handleSubmit}>
+      <form onSubmit={form.onSubmit(handleSubmit)}>
         <Stack gap="sm">
           <Select
             label="Mémo associé"
             placeholder="Choisir un mémo"
             data={(memos ?? []).map((m) => ({ value: String(m.id), label: m.title }))}
-            value={memoId}
-            onChange={(v) => { setMemoId(v); setErrors((e) => ({ ...e, memoId: undefined })); }}
-            error={errors.memoId}
             searchable
+            {...form.getInputProps("memoId")}
           />
           <TextInput
             label="Contenu"
             placeholder="Décrire l'action à faire"
-            value={content}
-            onChange={(e) => { setContent(e.currentTarget.value); setErrors((e2) => ({ ...e2, content: undefined })); }}
-            error={errors.content}
+            {...form.getInputProps("content")}
           />
           <Select
             label="Assigné à"
             placeholder="Optionnel"
             clearable
             data={(users ?? []).map((u) => ({ value: String(u.id), label: u.name }))}
-            value={assigneeId}
-            onChange={setAssigneeId}
+            {...form.getInputProps("assigneeId")}
           />
           <TextInput
             label="Deadline"
             placeholder="YYYY-MM-DD"
-            value={deadline}
-            onChange={(e) => setDeadline(e.currentTarget.value)}
+            {...form.getInputProps("deadline")}
           />
           <Group justify="flex-end" mt="xs">
             <Button variant="default" onClick={onClose}>
