@@ -11,7 +11,7 @@ export function WhitelistPage() {
   const form = useForm({
     initialValues: { email: "" },
     validate: {
-      email: (v) => (/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v) ? null : "Email invalide"),
+      email: (v) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v) ? null : "Email invalide",
     },
   });
 
