@@ -7,7 +7,6 @@ generator client {
 }
 
 enum Role {
-  AER
   ADMIN
 }
 
@@ -15,7 +14,7 @@ model User {
   id        Int      @id @default(autoincrement())
   email     String   @unique
   name      String
-  role      Role     @default(AER)
+  role      Role     @default(ADMIN)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 

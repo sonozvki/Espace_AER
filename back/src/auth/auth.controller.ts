@@ -8,7 +8,6 @@ import { z } from "zod";
 
 const WhitelistBodySchema = z.object({
   email: z.string().email(),
-  role: z.enum(["AER", "ADMIN"]),
 });
 
 const FRONTEND = process.env["FRONTEND_URL"] ?? "http://localhost:5173";
@@ -63,8 +62,7 @@ export const authController = new Elysia({ prefix: "/auth" })
         return redirect(FRONTEND);
       } catch (err) {
         if (err instanceof Error && err.message === "UNAUTHORIZED") {
-          set.redirect = `${FRONTEND}/login?error=unauthorized`;
-          return;
+          return redirect(`${FRONTEND}/login?error=unauthorized`);
         }
         console.error("[auth/callback] CAUGHT ERROR:", err);
         return httpStatus(500, { error: "Erreur d'authentification" });
@@ -112,7 +110,7 @@ export const authController = new Elysia({ prefix: "/auth" })
       if (session.role !== "ADMIN") return httpStatus(403, { error: "Réservé aux admins" });
       const parsed = WhitelistBodySchema.safeParse(body);
       if (!parsed.success) return httpStatus(400, { error: parsed.error.flatten() });
-      return addToWhitelist(parsed.data.email, parsed.data.role);
+      return addToWhitelist(parsed.data.email);
     },
     { body: t.Any() }
   )

@@ -4,8 +4,8 @@ export async function findWhitelistEntry(email: string) {
   return prisma.whitelist.findUnique({ where: { email } });
 }
 
-export async function addToWhitelist(email: string, role: "AER" | "ADMIN") {
-  return prisma.whitelist.create({ data: { email, role } });
+export async function addToWhitelist(email: string) {
+  return prisma.whitelist.create({ data: { email, role: "ADMIN" } });
 }
 
 export async function removeFromWhitelist(email: string) {
@@ -13,30 +13,22 @@ export async function removeFromWhitelist(email: string) {
 }
 
 /**
- * Synchronise la whitelist DB depuis les variables d'env WHITELIST_ADMINS et WHITELIST_AERS.
- * Appelé au démarrage du serveur. Les emails absents de l'env sont supprimés de la DB.
+ * Synchronise la whitelist DB depuis la variable d'env WHITELIST_ADMINS.
  * Format : WHITELIST_ADMINS=email1@epitech.eu,email2@epitech.eu
  */
 export async function syncWhitelistFromEnv() {
-  const admins = parseEmails(process.env["WHITELIST_ADMINS"]);
-  const aers = parseEmails(process.env["WHITELIST_AERS"]);
+  const emails = parseEmails(process.env["WHITELIST_ADMINS"]);
+  if (emails.length === 0) return;
 
-  if (admins.length === 0 && aers.length === 0) return;
-
-  const entries = [
-    ...admins.map((email) => ({ email, role: "ADMIN" as const })),
-    ...aers.map((email) => ({ email, role: "AER" as const })),
-  ];
-
-  for (const entry of entries) {
+  for (const email of emails) {
     await prisma.whitelist.upsert({
-      where: { email: entry.email },
-      update: { role: entry.role },
-      create: entry,
+      where: { email },
+      update: { role: "ADMIN" },
+      create: { email, role: "ADMIN" },
     });
   }
 
-  console.log(`Whitelist seeded from env: ${admins.length} admin(s), ${aers.length} AER(s)`);
+  console.log(`Whitelist seeded from env: ${emails.length} admin(s)`);
 }
 
 function parseEmails(raw?: string): string[] {

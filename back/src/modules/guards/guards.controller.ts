@@ -13,8 +13,7 @@ export const guardsController = new Elysia({ prefix: "/guards" })
 
   .get("/", () => guardsService.listGuards())
 
-  .post("/generate", async ({ body, session }) => {
-    if (session.role !== "ADMIN") return httpStatus(403, { error: "Réservé aux admins" });
+  .post("/generate", async ({ body }) => {
     const parsed = GenerateGuardsSchema.safeParse(body);
     if (!parsed.success) return httpStatus(400, { error: parsed.error.flatten() });
     const result = await guardsService.generateYear(parsed.data.year);
