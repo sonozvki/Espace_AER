@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { api } from "@/lib/api";
+import { apiFetch } from "@/lib/api";
 
 export type AuthUser = {
   id: number;
@@ -11,11 +11,7 @@ export type AuthUser = {
 export function useAuth() {
   const { data, isLoading, error } = useQuery({
     queryKey: ["auth", "me"],
-    queryFn: async (): Promise<AuthUser> => {
-      const { data, error } = await api.auth.me.get();
-      if (error) throw error;
-      return data as AuthUser;
-    },
+    queryFn: () => apiFetch<AuthUser>("/auth/me"),
     retry: false,
   });
 
