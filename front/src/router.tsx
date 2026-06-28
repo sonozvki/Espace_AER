@@ -6,6 +6,7 @@ import { MemosPage } from "@/routes/MemosPage";
 import { GuardsPage } from "@/routes/GuardsPage";
 import { ToolboxPage } from "@/routes/ToolboxPage";
 import { WhitelistPage } from "@/routes/WhitelistPage";
+import { SettingsPage } from "@/routes/SettingsPage";
 import "@/styles/global.css";
 
 export const router = createBrowserRouter([
@@ -23,6 +24,7 @@ export const router = createBrowserRouter([
       { path: "guards", element: <GuardsPage /> },
       { path: "toolbox", element: <ToolboxPage /> },
       { path: "whitelist", element: <WhitelistPage /> },
+      { path: "settings", element: <SettingsPage /> },
     ],
   },
   {

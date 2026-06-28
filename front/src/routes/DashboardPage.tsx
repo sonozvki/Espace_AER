@@ -21,6 +21,7 @@ import {
 import { useAuth } from "@/hooks/useAuth";
 import { useGuards } from "@/features/guards/hooks";
 import { useActionItems } from "@/features/action-items/hooks";
+import { EpitechPanel } from "@/features/epitech/components/EpitechPanel";
 import { STATUS_COLORS, STATUS_LABELS } from "@/features/action-items/types";
 import type { Guard } from "@/features/guards/types";
 import type { ActionItem } from "@/features/action-items/types";
@@ -280,6 +281,9 @@ export function DashboardPage() {
           )}
         </Paper>
       </SimpleGrid>
+
+      {/* Activités Epitech */}
+      <EpitechPanel hasToken={user?.hasEpitechToken ?? false} />
     </Stack>
   );
 }

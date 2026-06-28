@@ -4,10 +4,15 @@ import { createSession, verifySession, sessionCookieOptions, COOKIE } from "@/au
 import { prisma } from "@/db/prisma";
 import { httpStatus } from "@/lib/http";
 import { addToWhitelist, removeFromWhitelist } from "@/auth/whitelist";
+import { encrypt } from "@/lib/crypto";
 import { z } from "zod";
 
 const WhitelistBodySchema = z.object({
   email: z.string().email(),
+});
+
+const EpitechTokenBodySchema = z.object({
+  token: z.string().min(10),
 });
 
 const FRONTEND = process.env["FRONTEND_URL"] ?? "http://localhost:5173";
@@ -82,7 +87,43 @@ export const authController = new Elysia({ prefix: "/auth" })
     if (!session) return httpStatus(401, { error: "Non authentifié" });
     const user = await prisma.user.findUnique({ where: { id: Number(session.sub) } });
     if (!user) return httpStatus(401, { error: "Utilisateur introuvable" });
-    return { id: user.id, email: user.email, name: user.name, role: user.role };
+    return {
+      id: user.id,
+      email: user.email,
+      name: user.name,
+      role: user.role,
+      hasEpitechToken: !!user.epitechToken,
+    };
+  })
+
+  // Cookie Epitech (intra.epitech.eu) — stocké chiffré, propre à l'utilisateur connecté
+  .put(
+    "/epitech-token",
+    async ({ cookie, body }) => {
+      const session = await getSession(cookie);
+      if (!session) return httpStatus(401, { error: "Non authentifié" });
+      const parsed = EpitechTokenBodySchema.safeParse(body);
+      if (!parsed.success) return httpStatus(400, { error: "Token invalide" });
+      // Valeur du cookie "user" de intra.epitech.eu. On accepte aussi un collage
+      // de la forme "user=xxx" → on ne garde que la valeur.
+      const token = parsed.data.token.trim().replace(/^user=/i, "").trim();
+      await prisma.user.update({
+        where: { id: Number(session.sub) },
+        data: { epitechToken: encrypt(token) },
+      });
+      return { hasEpitechToken: true };
+    },
+    { body: t.Any() }
+  )
+
+  .delete("/epitech-token", async ({ cookie }) => {
+    const session = await getSession(cookie);
+    if (!session) return httpStatus(401, { error: "Non authentifié" });
+    await prisma.user.update({
+      where: { id: Number(session.sub) },
+      data: { epitechToken: null },
+    });
+    return { hasEpitechToken: false };
   })
 
   .get("/users", async ({ cookie }) => {
