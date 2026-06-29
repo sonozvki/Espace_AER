@@ -2,7 +2,7 @@ import { Elysia, t } from "elysia";
 import { verifySession, COOKIE } from "@/auth/session";
 import { httpStatus } from "@/lib/http";
 import {
-  getAssignedActivities,
+  getMyActivities,
   EpitechTokenMissingError,
   EpitechTokenInvalidError,
 } from "./epitech.service";
@@ -18,12 +18,7 @@ export const epitechController = new Elysia({ prefix: "/epitech" })
     "/activities",
     async ({ session, query }) => {
       try {
-        return await getAssignedActivities(
-          Number(session.sub),
-          session.email,
-          query.start,
-          query.end
-        );
+        return await getMyActivities(Number(session.sub), query.start, query.end);
       } catch (err) {
         if (err instanceof EpitechTokenMissingError)
           return httpStatus(409, { error: "no_token" });

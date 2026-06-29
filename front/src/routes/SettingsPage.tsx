@@ -73,7 +73,7 @@ export function SettingsPage() {
               <Anchor href="https://intra.epitech.eu" target="_blank" rel="noreferrer">
                 intra.epitech.eu
               </Anchor>{" "}
-              avec ton compte Microsoft.
+              avec ton compte AER Microsoft.
             </List.Item>
             <List.Item>
               Ouvre les outils de développement (<Code>F12</Code>) → onglet{" "}

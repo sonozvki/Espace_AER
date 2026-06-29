@@ -14,8 +14,9 @@ type RawEvent = {
   codeevent?: string;
   codeacti?: string;
   room?: { code?: string } | null;
-  event_registered?: boolean;
-  prof_inst?: Array<{ login?: string; title?: string }> | null;
+  // Renseigné (non-null) uniquement sur les activités où l'AER s'est inscrit
+  // (valeurs observées : "accept", "eat", ...). C'est notre signal d'assignation.
+  status_manager?: string | null;
 };
 
 export type EpitechActivity = {
@@ -27,7 +28,7 @@ export type EpitechActivity = {
   start: string;
   end: string;
   room: string | null;
-  registered: boolean;
+  status: string | null; // status_manager brut (statut de l'AER sur l'activité)
 };
 
 // Pas de token enregistré pour cet utilisateur
@@ -36,13 +37,12 @@ export class EpitechTokenMissingError extends Error {}
 export class EpitechTokenInvalidError extends Error {}
 
 /**
- * Récupère les activités du planning intra où l'utilisateur est assigné
- * (son login Epitech apparaît dans prof_inst), sur la plage [start, end].
+ * Récupère les activités du planning intra où l'AER est inscrit
+ * (status_manager non-null), sur la plage [start, end].
  * Les dates sont au format "YYYY-MM-DD".
  */
-export async function getAssignedActivities(
+export async function getMyActivities(
   userId: number,
-  email: string,
   start: string,
   end: string
 ): Promise<EpitechActivity[]> {
@@ -66,13 +66,10 @@ export async function getAssignedActivities(
   const data: unknown = await res.json().catch(() => null);
   if (!Array.isArray(data)) throw new EpitechTokenInvalidError();
 
-  const myLogin = email.toLowerCase();
   const events = data as RawEvent[];
 
   return events
-    .filter((e) =>
-      (e.prof_inst ?? []).some((p) => p.login?.toLowerCase() === myLogin)
-    )
+    .filter((e) => e.status_manager != null && e.status_manager !== "")
     .map((e) => ({
       id: e.codeevent ?? e.codeacti ?? `${e.codemodule ?? "?"}-${e.start ?? ""}`,
       module: e.codemodule ?? "",
@@ -82,7 +79,7 @@ export async function getAssignedActivities(
       start: e.start ?? "",
       end: e.end ?? "",
       room: e.room?.code ?? null,
-      registered: !!e.event_registered,
+      status: e.status_manager ?? null,
     }))
     .sort((a, b) => a.start.localeCompare(b.start));
 }

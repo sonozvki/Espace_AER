@@ -7,7 +7,7 @@ export type EpitechActivity = {
   start: string; // "YYYY-MM-DD HH:mm:ss"
   end: string;
   room: string | null;
-  registered: boolean;
+  status: string | null; // statut de l'AER sur l'activité (status_manager)
 };
 
 // État renvoyé par le hook pour piloter l'affichage du dashboard
