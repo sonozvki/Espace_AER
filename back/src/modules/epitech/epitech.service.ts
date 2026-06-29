@@ -33,8 +33,10 @@ export type EpitechActivity = {
 
 // Pas de token enregistré pour cet utilisateur
 export class EpitechTokenMissingError extends Error {}
-// Cookie présent mais refusé par l'intra (expiré / invalide)
+// Cookie présent mais refusé par l'intra avec 401/403 (expiré / invalide)
 export class EpitechTokenInvalidError extends Error {}
+// Erreur réseau ou réponse inattendue de l'intra (throttle, maintenance, etc.)
+export class EpitechUpstreamError extends Error {}
 
 /**
  * Récupère les activités du planning intra où l'AER est inscrit
@@ -57,16 +59,33 @@ export async function getMyActivities(
 
   let res: Response;
   try {
-    res = await fetch(url, { headers: { Cookie: `user=${cookie}` } });
+    res = await fetch(url, {
+      headers: { Cookie: `user=${cookie}` },
+      redirect: "manual",
+    });
   } catch {
+    throw new EpitechUpstreamError();
+  }
+
+  // 401/403 = cookie refusé par l'intra → token invalide
+  if (res.status === 401 || res.status === 403) throw new EpitechTokenInvalidError();
+  // Redirection (302 vers login) = session refusée
+  if (res.status >= 300 && res.status < 400) throw new EpitechTokenInvalidError();
+  // Autre erreur HTTP (5xx, throttle…) = problème upstream transitoire
+  if (!res.ok) throw new EpitechUpstreamError();
+
+  const bodyText = await res.text();
+  let data: unknown;
+  try {
+    data = JSON.parse(bodyText);
+  } catch {
+    // Réponse non-JSON (HTML de login) = session refusée
     throw new EpitechTokenInvalidError();
   }
-  if (!res.ok) throw new EpitechTokenInvalidError();
 
-  const data: unknown = await res.json().catch(() => null);
-  if (!Array.isArray(data)) throw new EpitechTokenInvalidError();
-
-  const events = data as RawEvent[];
+  // Planning vide : l'intra renvoie {} (objet) au lieu de []. On le traite
+  // comme une liste vide, ce n'est pas une erreur de token.
+  const events: RawEvent[] = Array.isArray(data) ? (data as RawEvent[]) : [];
 
   return events
     .filter((e) => e.status_manager != null && e.status_manager !== "")

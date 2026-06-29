@@ -3,7 +3,7 @@ import type { EpitechActivity } from "./types";
 
 // Erreur typée pour distinguer "pas de token" / "token invalide" côté UI
 export class EpitechApiError extends Error {
-  constructor(public reason: "no_token" | "token_invalid" | "unknown") {
+  constructor(public reason: "no_token" | "token_invalid" | "upstream_error" | "unknown") {
     super(reason);
   }
 }
@@ -25,6 +25,7 @@ export const epitechApi = {
           : "unknown";
       if (reason === "no_token") throw new EpitechApiError("no_token");
       if (reason === "token_invalid") throw new EpitechApiError("token_invalid");
+      if (reason === "upstream_error") throw new EpitechApiError("upstream_error");
       throw new EpitechApiError("unknown");
     }
   },

@@ -5,6 +5,7 @@ import {
   getMyActivities,
   EpitechTokenMissingError,
   EpitechTokenInvalidError,
+  EpitechUpstreamError,
 } from "./epitech.service";
 
 export const epitechController = new Elysia({ prefix: "/epitech" })
@@ -24,6 +25,8 @@ export const epitechController = new Elysia({ prefix: "/epitech" })
           return httpStatus(409, { error: "no_token" });
         if (err instanceof EpitechTokenInvalidError)
           return httpStatus(502, { error: "token_invalid" });
+        if (err instanceof EpitechUpstreamError)
+          return httpStatus(503, { error: "upstream_error" });
         throw err;
       }
     },
