@@ -5,10 +5,12 @@ import { useAuth } from "@/hooks/useAuth";
 import { BASE_URL } from "@/lib/api";
 
 const NAV_ITEMS = [
+  { path: "/dashboard", label: "Tableau de bord" },
   { path: "/memos", label: "Mémos" },
   { path: "/guards", label: "Gardes" },
   { path: "/toolbox", label: "Toolbox" },
   { path: "/whitelist", label: "Whitelist" },
+  { path: "/settings", label: "Mon compte" },
 ];
 
 export function Layout() {

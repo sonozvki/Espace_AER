@@ -9,17 +9,22 @@ import {
   Center,
   Text,
   Modal,
+  SegmentedControl,
 } from "@mantine/core";
-import { IconPlus, IconSearch } from "@tabler/icons-react";
+import { IconPlus, IconSearch, IconList, IconCalendar } from "@tabler/icons-react";
 import { useMemos, useDeleteMemo } from "@/features/memos/hooks";
 import { MemoCard } from "@/features/memos/components/MemoCard";
 import { MemoEditorModal } from "@/features/memos/components/MemoEditorModal";
+import { MemoCalendarView } from "@/features/memos/components/MemoCalendarView";
+
+type ViewMode = "list" | "calendar";
 
 export function MemosPage() {
   const { data: memos, isLoading } = useMemos();
   const deleteMemo = useDeleteMemo();
 
   const [search, setSearch] = useState("");
+  const [viewMode, setViewMode] = useState<ViewMode>("list");
   const [editorOpen, setEditorOpen] = useState(false);
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<number | null>(null);
@@ -45,22 +50,40 @@ export function MemosPage() {
           <Title order={2} ff="Anton, sans-serif">
             Mémos
           </Title>
-          <Button leftSection={<IconPlus size={16} />} onClick={() => setEditorOpen(true)}>
-            Nouveau mémo
-          </Button>
+          <Group gap="sm">
+            <SegmentedControl
+              size="xs"
+              value={viewMode}
+              onChange={(v) => setViewMode(v as ViewMode)}
+              data={[
+                { value: "list", label: <Group gap={4} wrap="nowrap"><IconList size={14} /><span>Liste</span></Group> },
+                { value: "calendar", label: <Group gap={4} wrap="nowrap"><IconCalendar size={14} /><span>Calendrier</span></Group> },
+              ]}
+            />
+            <Button leftSection={<IconPlus size={16} />} onClick={() => setEditorOpen(true)}>
+              Nouveau mémo
+            </Button>
+          </Group>
         </Group>
 
-        <TextInput
-          placeholder="Rechercher un mémo…"
-          leftSection={<IconSearch size={14} />}
-          value={search}
-          onChange={(e) => setSearch(e.currentTarget.value)}
-        />
+        {viewMode === "list" && (
+          <TextInput
+            placeholder="Rechercher un mémo…"
+            leftSection={<IconSearch size={14} />}
+            value={search}
+            onChange={(e) => setSearch(e.currentTarget.value)}
+          />
+        )}
 
         {isLoading ? (
           <Center py="xl">
             <Loader />
           </Center>
+        ) : viewMode === "calendar" ? (
+          <MemoCalendarView
+            memos={memos ?? []}
+            onOpenMemo={(id) => setSelectedId(id)}
+          />
         ) : filtered.length === 0 ? (
           <Text c="dimmed" ta="center" py="xl">
             {search ? "Aucun mémo trouvé" : "Aucun mémo, créez-en un !"}
