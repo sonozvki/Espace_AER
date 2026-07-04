@@ -88,6 +88,7 @@ export function SettingsPage() {
 
           <PasswordInput
             label="Cookie « user » de l'intra"
+            autoComplete="off"
             placeholder={
               hasToken
                 ? "•••••••• (un cookie est déjà enregistré)"
