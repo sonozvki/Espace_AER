@@ -104,7 +104,7 @@ export function MemoCalendarView({ memos, onOpenMemo }: Props) {
                   </Group>
 
                   {monthMemos.length === 0 ? (
-                    <Text size="xs" c="dark.3" fs="italic">
+                    <Text size="xs" c="dimmed" fs="italic">
                       Aucun mémo
                     </Text>
                   ) : (
@@ -117,7 +117,7 @@ export function MemoCalendarView({ memos, onOpenMemo }: Props) {
                               cursor: "pointer",
                               padding: "3px 6px",
                               borderRadius: 4,
-                              backgroundColor: "var(--mantine-color-dark-5)",
+                              backgroundColor: "var(--epi-surface)",
                               borderLeft: "2px solid var(--mantine-color-epitech-4)",
                             }}
                           >

@@ -89,7 +89,7 @@ function DayCell({ day, guard, absences, currentUser }: DayCellProps) {
   const myAbsence = absences.find((a) => a.userId === currentUser?.id);
 
   const bgColor = today
-    ? "var(--mantine-color-epitech-9)"
+    ? "var(--epi-today-bg)"
     : guard?.aerId
     ? "var(--epi-surface)"
     : "var(--epi-bg)";

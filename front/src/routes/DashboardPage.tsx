@@ -7,6 +7,7 @@ import {
   Paper,
   Badge,
   Box,
+  Button,
   Loader,
   Center,
   ThemeIcon,
@@ -16,9 +17,10 @@ import {
 import {
   IconShield,
   IconCheckbox,
-  IconCalendarEvent,
   IconUserOff,
+  IconArrowRight,
 } from "@tabler/icons-react";
+import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { useGuards } from "@/features/guards/hooks";
 import { useAbsences } from "@/features/absences/hooks";
@@ -28,6 +30,16 @@ import { STATUS_COLORS, STATUS_LABELS } from "@/features/action-items/types";
 import type { Guard } from "@/features/guards/types";
 import type { Absence } from "@/features/absences/types";
 import type { ActionItem } from "@/features/action-items/types";
+
+const MONO = '"IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace';
+
+function getWeekNumber(d: Date) {
+  const date = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
+  const dayNum = date.getUTCDay() || 7;
+  date.setUTCDate(date.getUTCDate() + 4 - dayNum);
+  const yearStart = new Date(Date.UTC(date.getUTCFullYear(), 0, 1));
+  return Math.ceil(((date.getTime() - yearStart.getTime()) / 86400000 + 1) / 7);
+}
 
 const DAYS_FR = ["Dim", "Lun", "Mar", "Mer", "Jeu", "Ven", "Sam"];
 const MONTHS_FR = [
@@ -152,7 +164,7 @@ function ActionRow({ item }: { item: ActionItem }) {
       p="xs"
       style={{
         borderRadius: 6,
-        backgroundColor: "var(--mantine-color-dark-5)",
+        backgroundColor: "var(--epi-surface)",
         borderLeft: `2px solid var(--mantine-color-${STATUS_COLORS[item.status]}-5)`,
       }}
     >
@@ -220,6 +232,7 @@ export function DashboardPage() {
   const hour = new Date().getHours();
   const greeting =
     hour < 12 ? "Bonjour" : hour < 18 ? "Bon après-midi" : "Bonsoir";
+  const navigate = useNavigate();
 
   return (
     <Stack gap="xl">
@@ -227,18 +240,47 @@ export function DashboardPage() {
       <Box
         p="xl"
         style={{
-          background: "linear-gradient(135deg, var(--mantine-color-epitech-9) 0%, var(--mantine-color-dark-6) 100%)",
-          borderRadius: 12,
-          border: "1px solid var(--epi-border)",
+          background: "var(--epi-blue)",
+          borderRadius: 8,
+          position: "relative",
+          overflow: "hidden",
         }}
       >
-        <Text size="sm" c="dimmed" tt="uppercase" style={{ letterSpacing: "0.1em" }}>
-          Espace AER
+        {/* Pixels décoratifs */}
+        <Stack
+          gap={4}
+          aria-hidden="true"
+          style={{ pointerEvents: "none", position: "absolute", top: 20, right: 32 }}
+        >
+          <Group gap={4}>
+            {[0.4, 0.2, 0.6].map((o, i) => (
+              <Box key={i} style={{ background: "var(--mantine-color-white)", opacity: o, width: 10, height: 10 }} />
+            ))}
+          </Group>
+          <Group gap={4}>
+            {[0.2, 0.5].map((o, i) => (
+              <Box key={i} style={{ background: "var(--mantine-color-white)", opacity: o, width: 10, height: 10 }} />
+            ))}
+          </Group>
+        </Stack>
+
+        <Text
+          size="sm"
+          style={{ fontFamily: MONO, color: "rgba(255,255,255,0.75)", letterSpacing: "0.2em" }}
+        >
+          {"< Nice • Espace AER • Promotion 2029 />"}
         </Text>
-        <Title order={1} ff="Anton, sans-serif" mt={4}>
-          {greeting}, {user?.name?.split(" ")[0] ?? ":"}
+        <Title
+          order={1}
+          ff="Anton, sans-serif"
+          tt="uppercase"
+          c="white"
+          mt={8}
+          style={{ fontSize: "clamp(2.2rem, 5vw, 3.4rem)", lineHeight: 1 }}
+        >
+          {greeting}, {user?.name?.split(" ")[0] ?? "AER"}
         </Title>
-        <Text c="dimmed" mt={4}>
+        <Text mt="sm" size="lg" style={{ color: "rgba(255,255,255,0.92)" }}>
           {new Date().toLocaleDateString("fr-FR", {
             weekday: "long",
             day: "numeric",
@@ -247,24 +289,57 @@ export function DashboardPage() {
           })}
         </Text>
 
+        <Button
+          mt="lg"
+          variant="white"
+          color="dark"
+          rightSection={<IconArrowRight size={16} />}
+          onClick={() => navigate("/guards")}
+        >
+          Planning des gardes
+        </Button>
+
         {/* Stats rapides */}
-        <SimpleGrid cols={{ base: 2, sm: 3 }} mt="lg" spacing="sm">
+        <SimpleGrid cols={{ base: 1, sm: 3 }} mt="xl" spacing={2}>
           <StatChip
-            icon={<IconShield size={16} />}
             label="Gardes à venir"
             value={guardsLoading ? "…" : String(myUpcomingGuards.length)}
+            caption="sur les 30 prochains jours"
           />
           <StatChip
-            icon={<IconCheckbox size={16} />}
             label="Actions cette semaine"
             value={actionsLoading ? "…" : String(myWeekActions.length)}
+            caption="deadline avant dimanche"
           />
           <StatChip
-            icon={<IconCalendarEvent size={16} />}
             label="Actions en cours"
             value={actionsLoading ? "…" : String(allMyPendingActions.length)}
+            caption="à traiter"
           />
         </SimpleGrid>
+      </Box>
+
+      {/* Section heading */}
+      <Box>
+        <Group gap={8} align="center">
+          <Box style={{ width: 24, height: 2, background: "var(--mantine-color-pink-5)" }} />
+          <Text
+            size="xs"
+            tt="uppercase"
+            c="pink.5"
+            style={{ fontFamily: MONO, letterSpacing: "0.2em" }}
+          >
+            à venir_
+          </Text>
+        </Group>
+        <Group justify="space-between" align="baseline" mt={4}>
+          <Title order={2} ff="Anton, sans-serif" tt="uppercase">
+            Gardes & actions
+          </Title>
+          <Text size="xs" c="dimmed" style={{ fontFamily: MONO }}>
+            week {getWeekNumber(new Date())}_
+          </Text>
+        </Group>
       </Box>
 
       <SimpleGrid cols={{ base: 1, md: 2 }} spacing="md">
@@ -369,31 +444,28 @@ export function DashboardPage() {
 }
 
 function StatChip({
-  icon,
   label,
   value,
+  caption,
 }: {
-  icon: React.ReactNode;
   label: string;
   value: string;
+  caption: string;
 }) {
   return (
-    <Box
-      p="sm"
-      style={{
-        background: "rgba(255,255,255,0.05)",
-        borderRadius: 8,
-        border: "1px solid rgba(255,255,255,0.08)",
-      }}
-    >
-      <Group gap="xs" mb={4}>
-        {icon}
-        <Text size="xs" c="dimmed">
-          {label}
-        </Text>
-      </Group>
-      <Text size="xl" fw={700} ff="Anton, sans-serif">
+    <Box p="md" style={{ background: "rgba(0,0,0,0.28)" }}>
+      <Text
+        size="xs"
+        tt="uppercase"
+        style={{ fontFamily: MONO, color: "rgba(255,255,255,0.7)", letterSpacing: "0.15em" }}
+      >
+        {label}_
+      </Text>
+      <Text fw={700} ff="Anton, sans-serif" c="white" mt={4} style={{ fontSize: "1.8rem", lineHeight: 1.1 }}>
         {value}
+      </Text>
+      <Text size="xs" mt={4} style={{ fontFamily: MONO, color: "rgba(255,255,255,0.6)" }}>
+        {caption}
       </Text>
     </Box>
   );
