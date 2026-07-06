@@ -24,6 +24,18 @@ model User {
   swapRequests    GuardSwapRequest[] @relation("requester")
   swapAcceptances GuardSwapRequest[] @relation("accepter")
   auditLogs       AuditLog[]
+  absences        Absence[]
+}
+
+// Absence déclarée par un AER sur une journée (indépendante des gardes)
+model Absence {
+  id        Int      @id @default(autoincrement())
+  date      DateTime @db.Date
+  createdAt DateTime @default(now())
+  user   User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId Int
+  @@unique([date, userId])
+  @@index([date])
 }
 
 model Whitelist {
