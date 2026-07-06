@@ -17,13 +17,16 @@ import {
   IconShield,
   IconCheckbox,
   IconCalendarEvent,
+  IconUserOff,
 } from "@tabler/icons-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useGuards } from "@/features/guards/hooks";
+import { useAbsences } from "@/features/absences/hooks";
 import { useActionItems } from "@/features/action-items/hooks";
 import { EpitechPanel } from "@/features/epitech/components/EpitechPanel";
 import { STATUS_COLORS, STATUS_LABELS } from "@/features/action-items/types";
 import type { Guard } from "@/features/guards/types";
+import type { Absence } from "@/features/absences/types";
 import type { ActionItem } from "@/features/action-items/types";
 
 const DAYS_FR = ["Dim", "Lun", "Mar", "Mer", "Jeu", "Ven", "Sam"];
@@ -104,6 +107,45 @@ function GuardCard({ guard }: { guard: Guard }) {
   );
 }
 
+function formatAbsenceDate(iso: string) {
+  const d = new Date(iso);
+  const day = String(d.getDate()).padStart(2, "0");
+  const month = String(d.getMonth() + 1).padStart(2, "0");
+  return `${day}/${month}/${d.getFullYear()}`;
+}
+
+function AbsenceRow({ absence }: { absence: Absence }) {
+  const d = new Date(absence.date);
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const isToday = d.getTime() === today.getTime();
+
+  return (
+    <Paper
+      p="sm"
+      withBorder
+      style={{
+        borderColor: isToday ? "var(--mantine-color-red-5)" : "var(--epi-border)",
+        borderLeftWidth: isToday ? 3 : 1,
+      }}
+    >
+      <Group gap="sm">
+        <ThemeIcon size="md" variant="light" color="red">
+          <IconUserOff size={14} />
+        </ThemeIcon>
+        <Text size="sm" fw={isToday ? 700 : 500}>
+          {absence.user.name.split(" ")[0]} absent : {formatAbsenceDate(absence.date)}
+          {isToday && (
+            <Badge size="xs" color="red" variant="filled" ml="xs">
+              Aujourd'hui
+            </Badge>
+          )}
+        </Text>
+      </Group>
+    </Paper>
+  );
+}
+
 function ActionRow({ item }: { item: ActionItem }) {
   return (
     <Box
@@ -134,7 +176,18 @@ function ActionRow({ item }: { item: ActionItem }) {
 export function DashboardPage() {
   const { user } = useAuth();
   const { data: guards, isLoading: guardsLoading } = useGuards();
+  const { data: absences, isLoading: absencesLoading } = useAbsences();
   const { data: actionItems, isLoading: actionsLoading } = useActionItems();
+
+  const upcomingAbsences = useMemo<Absence[]>(() => {
+    if (!absences) return [];
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    return absences
+      .filter((a) => new Date(a.date) >= today)
+      .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
+      .slice(0, 8);
+  }, [absences]);
 
   const myUpcomingGuards = useMemo<Guard[]>(() => {
     if (!guards || !user) return [];
@@ -183,7 +236,7 @@ export function DashboardPage() {
           Espace AER
         </Text>
         <Title order={1} ff="Anton, sans-serif" mt={4}>
-          {greeting}, {user?.name?.split(" ")[0] ?? "—"}
+          {greeting}, {user?.name?.split(" ")[0] ?? ":"}
         </Title>
         <Text c="dimmed" mt={4}>
           {new Date().toLocaleDateString("fr-FR", {
@@ -276,6 +329,33 @@ export function DashboardPage() {
             <Stack gap="xs">
               {myWeekActions.map((a) => (
                 <ActionRow key={a.id} item={a} />
+              ))}
+            </Stack>
+          )}
+        </Paper>
+        {/* AER absents */}
+        <Paper p="md" withBorder style={{ borderColor: "var(--epi-border)" }}>
+          <Group mb="md">
+            <ThemeIcon variant="light" color="red">
+              <IconUserOff size={16} />
+            </ThemeIcon>
+            <Text fw={700} ff="Anton, sans-serif" size="lg">
+              AER absents
+            </Text>
+          </Group>
+          <Divider mb="md" />
+          {absencesLoading ? (
+            <Center py="md">
+              <Loader size="sm" />
+            </Center>
+          ) : upcomingAbsences.length === 0 ? (
+            <Text size="sm" c="dimmed" ta="center" py="md">
+              Aucune absence déclarée
+            </Text>
+          ) : (
+            <Stack gap="xs">
+              {upcomingAbsences.map((a) => (
+                <AbsenceRow key={a.id} absence={a} />
               ))}
             </Stack>
           )}

@@ -1,7 +1,9 @@
-import { Box, Text, Button, Stack, Tooltip, Badge } from "@mantine/core";
+import { Box, Text, Button, Stack, Tooltip, Badge, Group } from "@mantine/core";
 import type { Guard } from "../types";
 import type { User } from "@/features/shared/types";
+import type { Absence } from "@/features/absences/types";
 import { useAssignGuard } from "../hooks";
+import { useDeclareAbsence, useCancelAbsence } from "@/features/absences/hooks";
 
 const DAY_HEADERS = ["Lun", "Mar", "Mer", "Jeu", "Ven", "Sam"];
 
@@ -70,16 +72,21 @@ function isPast(d: Date) {
 interface DayCellProps {
   day: Date;
   guard: Guard | null;
+  absences: Absence[];
   currentUser: User | null;
 }
 
-function DayCell({ day, guard, currentUser }: DayCellProps) {
+function DayCell({ day, guard, absences, currentUser }: DayCellProps) {
   const assign = useAssignGuard();
+  const declareAbsence = useDeclareAbsence();
+  const cancelAbsence = useCancelAbsence();
+
   const past = isPast(day);
   const today = isToday(day);
   const isMyGuard = guard?.aerId === currentUser?.id;
   const isFree = !guard?.aerId;
   const isAdmin = currentUser?.role === "ADMIN";
+  const myAbsence = absences.find((a) => a.userId === currentUser?.id);
 
   const bgColor = today
     ? "var(--mantine-color-epitech-9)"
@@ -97,42 +104,49 @@ function DayCell({ day, guard, currentUser }: DayCellProps) {
     <Box
       style={{
         border: `1px solid ${borderColor}`,
-        borderRadius: 6,
-        padding: "6px 8px",
-        minHeight: 72,
+        borderRadius: 8,
+        padding: "10px 12px",
+        minHeight: 120,
         background: bgColor,
         opacity: past ? 0.5 : 1,
         display: "flex",
         flexDirection: "column",
-        gap: 4,
+        gap: 6,
       }}
     >
-      <Text size="xs" fw={today ? 700 : 400} c={today ? "epitech.4" : "dimmed"}>
+      <Text size="md" fw={today ? 700 : 500} c={today ? "epitech.4" : "dimmed"}>
         {day.getDate()}
       </Text>
 
       {guard ? (
-        <Stack gap={2} style={{ flex: 1 }}>
+        <Stack gap={4} style={{ flex: 1 }}>
           {guard.aer ? (
             <Tooltip label={guard.aer.email} withArrow>
-              <Badge size="xs" color={isMyGuard ? "epitech" : "gray"} variant="light" maw="100%">
+              <Badge size="md" color={isMyGuard ? "epitech" : "gray"} variant="light" maw="100%">
                 {guard.aer.name.split(" ")[0]}
               </Badge>
             </Tooltip>
           ) : (
-            <Text size="xs" c="dimmed" fs="italic">
+            <Text size="sm" c="dimmed" fs="italic">
               Libre
             </Text>
           )}
 
+          {absences.map((a) => (
+            <Tooltip key={a.id} label={`${a.user.name} absent ce jour`} withArrow>
+              <Badge size="md" color="red" variant="filled" maw="100%">
+                {a.user.name.split(" ")[0]} ✕
+              </Badge>
+            </Tooltip>
+          ))}
+
           {!past && currentUser && (
-            <>
-              {isFree && (
+            <Group gap={6} mt="auto" wrap="wrap">
+              {isFree && !myAbsence && (
                 <Button
-                  size="compact-xs"
+                  size="xs"
                   variant="light"
                   color="epitech"
-                  mt="auto"
                   loading={assign.isPending}
                   onClick={() => assign.mutate({ id: guard.id, aerId: currentUser.id })}
                 >
@@ -141,21 +155,41 @@ function DayCell({ day, guard, currentUser }: DayCellProps) {
               )}
               {(isMyGuard || isAdmin) && guard.aer && (
                 <Button
-                  size="compact-xs"
+                  size="xs"
                   variant="subtle"
                   color="red"
-                  mt="auto"
                   loading={assign.isPending}
                   onClick={() => assign.mutate({ id: guard.id, aerId: null })}
                 >
                   Libérer
                 </Button>
               )}
-            </>
+              {!myAbsence ? (
+                <Button
+                  size="xs"
+                  variant="subtle"
+                  color="red"
+                  loading={declareAbsence.isPending}
+                  onClick={() => declareAbsence.mutate(toDateKey(day))}
+                >
+                  Absent
+                </Button>
+              ) : (
+                <Button
+                  size="xs"
+                  variant="subtle"
+                  color="green"
+                  loading={cancelAbsence.isPending}
+                  onClick={() => cancelAbsence.mutate(myAbsence.id)}
+                >
+                  Présent
+                </Button>
+              )}
+            </Group>
           )}
         </Stack>
       ) : (
-        <Text size="xs" c="dimmed" fs="italic">
+        <Text size="sm" c="dimmed" fs="italic">
         </Text>
       )}
     </Box>
@@ -166,10 +200,11 @@ interface Props {
   year: number;
   month: number;
   guardsByDate: Map<string, Guard>;
+  absencesByDate: Map<string, Absence[]>;
   currentUser: User | null;
 }
 
-export function GuardCalendar({ year, month, guardsByDate, currentUser }: Props) {
+export function GuardCalendar({ year, month, guardsByDate, absencesByDate, currentUser }: Props) {
   const weeks = buildWeeks(year, month);
 
   return (
@@ -179,26 +214,26 @@ export function GuardCalendar({ year, month, guardsByDate, currentUser }: Props)
         style={{
           display: "grid",
           gridTemplateColumns: "repeat(6, 1fr)",
-          gap: 4,
-          marginBottom: 4,
+          gap: 8,
+          marginBottom: 8,
         }}
       >
         {DAY_HEADERS.map((h) => (
-          <Text key={h} size="xs" fw={600} c="dimmed" ta="center" py={4}>
+          <Text key={h} size="sm" fw={600} c="dimmed" ta="center" py={4}>
             {h}
           </Text>
         ))}
       </Box>
 
       {/* Weeks */}
-      <Stack gap={4}>
+      <Stack gap={8}>
         {weeks.map((week, wi) => (
           <Box
             key={wi}
             style={{
               display: "grid",
               gridTemplateColumns: "repeat(6, 1fr)",
-              gap: 4,
+              gap: 8,
             }}
           >
             {week.map((day, di) =>
@@ -207,10 +242,11 @@ export function GuardCalendar({ year, month, guardsByDate, currentUser }: Props)
                   key={day.toISOString()}
                   day={day}
                   guard={guardsByDate.get(toDateKey(day)) ?? null}
+                  absences={absencesByDate.get(toDateKey(day)) ?? []}
                   currentUser={currentUser}
                 />
               ) : (
-                <Box key={`empty-${wi}-${di}`} style={{ minHeight: 72 }} />
+                <Box key={`empty-${wi}-${di}`} style={{ minHeight: 120 }} />
               )
             )}
           </Box>
