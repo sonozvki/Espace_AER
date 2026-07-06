@@ -26,4 +26,10 @@ export const guardsService = {
     if (startOfDay(guard.date) < startOfDay(new Date())) throw new Error("PAST_GUARD");
     return guardsRepository.assign(id, aerId);
   },
+
+  // Utilisé par le module absences : libère la garde d'un AER sur une date donnée
+  async unassignUserOnDate(date: Date, userId: number) {
+    const guard = await guardsRepository.findByDate(date);
+    if (guard?.aerId === userId) await guardsRepository.assign(guard.id, null);
+  },
 };
