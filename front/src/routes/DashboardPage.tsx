@@ -7,6 +7,7 @@ import {
   Paper,
   Badge,
   Box,
+  Button,
   Loader,
   Center,
   ThemeIcon,
@@ -15,16 +16,26 @@ import {
 } from "@mantine/core";
 import {
   IconShield,
-  IconCheckbox,
-  IconCalendarEvent,
+  IconUserOff,
+  IconArrowRight,
 } from "@tabler/icons-react";
+import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { useGuards } from "@/features/guards/hooks";
-import { useActionItems } from "@/features/action-items/hooks";
+import { useAbsences } from "@/features/absences/hooks";
 import { EpitechPanel } from "@/features/epitech/components/EpitechPanel";
-import { STATUS_COLORS, STATUS_LABELS } from "@/features/action-items/types";
 import type { Guard } from "@/features/guards/types";
-import type { ActionItem } from "@/features/action-items/types";
+import type { Absence } from "@/features/absences/types";
+
+const MONO = '"IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace';
+
+function getWeekNumber(d: Date) {
+  const date = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
+  const dayNum = date.getUTCDay() || 7;
+  date.setUTCDate(date.getUTCDate() + 4 - dayNum);
+  const yearStart = new Date(Date.UTC(date.getUTCFullYear(), 0, 1));
+  return Math.ceil(((date.getTime() - yearStart.getTime()) / 86400000 + 1) / 7);
+}
 
 const DAYS_FR = ["Dim", "Lun", "Mar", "Mer", "Jeu", "Ven", "Sam"];
 const MONTHS_FR = [
@@ -35,24 +46,6 @@ const MONTHS_FR = [
 function formatGuardDate(iso: string) {
   const d = new Date(iso);
   return `${DAYS_FR[d.getDay()]} ${d.getDate()} ${MONTHS_FR[d.getMonth()]}`;
-}
-
-function getWeekBounds() {
-  const now = new Date();
-  const day = now.getDay();
-  const monday = new Date(now);
-  monday.setDate(now.getDate() - ((day + 6) % 7));
-  monday.setHours(0, 0, 0, 0);
-  const sunday = new Date(monday);
-  sunday.setDate(monday.getDate() + 6);
-  sunday.setHours(23, 59, 59, 999);
-  return { monday, sunday };
-}
-
-function isThisWeek(iso: string) {
-  const { monday, sunday } = getWeekBounds();
-  const d = new Date(iso);
-  return d >= monday && d <= sunday;
 }
 
 function isUpcoming(iso: string) {
@@ -104,37 +97,59 @@ function GuardCard({ guard }: { guard: Guard }) {
   );
 }
 
-function ActionRow({ item }: { item: ActionItem }) {
+function formatAbsenceDate(iso: string) {
+  const d = new Date(iso);
+  const day = String(d.getDate()).padStart(2, "0");
+  const month = String(d.getMonth() + 1).padStart(2, "0");
+  return `${day}/${month}/${d.getFullYear()}`;
+}
+
+function AbsenceRow({ absence }: { absence: Absence }) {
+  const d = new Date(absence.date);
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const isToday = d.getTime() === today.getTime();
+
   return (
-    <Box
-      p="xs"
+    <Paper
+      p="sm"
+      withBorder
       style={{
-        borderRadius: 6,
-        backgroundColor: "var(--mantine-color-dark-5)",
-        borderLeft: `2px solid var(--mantine-color-${STATUS_COLORS[item.status]}-5)`,
+        borderColor: isToday ? "var(--mantine-color-red-5)" : "var(--epi-border)",
+        borderLeftWidth: isToday ? 3 : 1,
       }}
     >
-      <Group justify="space-between" wrap="nowrap">
-        <Stack gap={2} style={{ flex: 1, minWidth: 0 }}>
-          <Text size="sm" truncate>
-            {item.content}
-          </Text>
-          <Text size="xs" c="dimmed" truncate>
-            {item.memo.title}
-          </Text>
-        </Stack>
-        <Badge size="xs" color={STATUS_COLORS[item.status]} variant="light" style={{ flexShrink: 0 }}>
-          {STATUS_LABELS[item.status]}
-        </Badge>
+      <Group gap="sm">
+        <ThemeIcon size="md" variant="light" color="red">
+          <IconUserOff size={14} />
+        </ThemeIcon>
+        <Text size="sm" fw={isToday ? 700 : 500}>
+          {absence.user.name.split(" ")[0]} absent : {formatAbsenceDate(absence.date)}
+          {isToday && (
+            <Badge size="xs" color="red" variant="filled" ml="xs">
+              Aujourd'hui
+            </Badge>
+          )}
+        </Text>
       </Group>
-    </Box>
+    </Paper>
   );
 }
 
 export function DashboardPage() {
   const { user } = useAuth();
   const { data: guards, isLoading: guardsLoading } = useGuards();
-  const { data: actionItems, isLoading: actionsLoading } = useActionItems();
+  const { data: absences, isLoading: absencesLoading } = useAbsences();
+
+  const upcomingAbsences = useMemo<Absence[]>(() => {
+    if (!absences) return [];
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    return absences
+      .filter((a) => new Date(a.date) >= today)
+      .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
+      .slice(0, 8);
+  }, [absences]);
 
   const myUpcomingGuards = useMemo<Guard[]>(() => {
     if (!guards || !user) return [];
@@ -144,29 +159,15 @@ export function DashboardPage() {
       .slice(0, 8);
   }, [guards, user]);
 
-  const myWeekActions = useMemo<ActionItem[]>(() => {
-    if (!actionItems || !user) return [];
-    return actionItems.filter(
-      (a) =>
-        a.assigneeId === user.id &&
-        a.status !== "DONE" &&
-        a.status !== "CANCELLED" &&
-        (a.deadline ? isThisWeek(a.deadline) : isThisWeek(a.createdAt))
-    );
-  }, [actionItems, user]);
-
-  const allMyPendingActions = useMemo<ActionItem[]>(() => {
-    if (!actionItems || !user) return [];
-    return actionItems.filter(
-      (a) =>
-        a.assigneeId === user.id &&
-        (a.status === "PENDING" || a.status === "IN_PROGRESS")
-    );
-  }, [actionItems, user]);
+  const freeUpcomingGuards = useMemo<number>(() => {
+    if (!guards) return 0;
+    return guards.filter((g) => !g.aerId && isUpcoming(g.date)).length;
+  }, [guards]);
 
   const hour = new Date().getHours();
   const greeting =
     hour < 12 ? "Bonjour" : hour < 18 ? "Bon après-midi" : "Bonsoir";
+  const navigate = useNavigate();
 
   return (
     <Stack gap="xl">
@@ -174,18 +175,47 @@ export function DashboardPage() {
       <Box
         p="xl"
         style={{
-          background: "linear-gradient(135deg, var(--mantine-color-epitech-9) 0%, var(--mantine-color-dark-6) 100%)",
-          borderRadius: 12,
-          border: "1px solid var(--epi-border)",
+          background: "var(--epi-blue)",
+          borderRadius: 8,
+          position: "relative",
+          overflow: "hidden",
         }}
       >
-        <Text size="sm" c="dimmed" tt="uppercase" style={{ letterSpacing: "0.1em" }}>
-          Espace AER
+        {/* Pixels décoratifs */}
+        <Stack
+          gap={4}
+          aria-hidden="true"
+          style={{ pointerEvents: "none", position: "absolute", top: 20, right: 32 }}
+        >
+          <Group gap={4}>
+            {[0.4, 0.2, 0.6].map((o, i) => (
+              <Box key={i} style={{ background: "var(--mantine-color-white)", opacity: o, width: 10, height: 10 }} />
+            ))}
+          </Group>
+          <Group gap={4}>
+            {[0.2, 0.5].map((o, i) => (
+              <Box key={i} style={{ background: "var(--mantine-color-white)", opacity: o, width: 10, height: 10 }} />
+            ))}
+          </Group>
+        </Stack>
+
+        <Text
+          size="sm"
+          style={{ fontFamily: MONO, color: "rgba(255,255,255,0.75)", letterSpacing: "0.2em" }}
+        >
+          {"< Espace AER />"}
         </Text>
-        <Title order={1} ff="Anton, sans-serif" mt={4}>
-          {greeting}, {user?.name?.split(" ")[0] ?? "—"}
+        <Title
+          order={1}
+          ff="Anton, sans-serif"
+          tt="uppercase"
+          c="white"
+          mt={8}
+          style={{ fontSize: "clamp(2.2rem, 5vw, 3.4rem)", lineHeight: 1 }}
+        >
+          {greeting}, {user?.name?.split(" ")[0] ?? "AER"}
         </Title>
-        <Text c="dimmed" mt={4}>
+        <Text mt="sm" size="lg" style={{ color: "rgba(255,255,255,0.92)" }}>
           {new Date().toLocaleDateString("fr-FR", {
             weekday: "long",
             day: "numeric",
@@ -194,24 +224,57 @@ export function DashboardPage() {
           })}
         </Text>
 
+        <Button
+          mt="lg"
+          variant="white"
+          color="dark"
+          rightSection={<IconArrowRight size={16} />}
+          onClick={() => navigate("/guards")}
+        >
+          Planning des gardes
+        </Button>
+
         {/* Stats rapides */}
-        <SimpleGrid cols={{ base: 2, sm: 3 }} mt="lg" spacing="sm">
+        <SimpleGrid cols={{ base: 1, sm: 3 }} mt="xl" spacing={2}>
           <StatChip
-            icon={<IconShield size={16} />}
-            label="Gardes à venir"
+            label="Mes gardes à venir"
             value={guardsLoading ? "…" : String(myUpcomingGuards.length)}
+            caption="sur les 30 prochains jours"
           />
           <StatChip
-            icon={<IconCheckbox size={16} />}
-            label="Actions cette semaine"
-            value={actionsLoading ? "…" : String(myWeekActions.length)}
+            label="Gardes libres"
+            value={guardsLoading ? "…" : String(freeUpcomingGuards)}
+            caption="à prendre sous 30 jours"
           />
           <StatChip
-            icon={<IconCalendarEvent size={16} />}
-            label="Actions en cours"
-            value={actionsLoading ? "…" : String(allMyPendingActions.length)}
+            label="Absences déclarées"
+            value={absencesLoading ? "…" : String(upcomingAbsences.length)}
+            caption="à venir"
           />
         </SimpleGrid>
+      </Box>
+
+      {/* Section heading */}
+      <Box>
+        <Group gap={8} align="center">
+          <Box style={{ width: 24, height: 2, background: "var(--mantine-color-pink-5)" }} />
+          <Text
+            size="xs"
+            tt="uppercase"
+            c="pink.5"
+            style={{ fontFamily: MONO, letterSpacing: "0.2em" }}
+          >
+            à venir_
+          </Text>
+        </Group>
+        <Group justify="space-between" align="baseline" mt={4}>
+          <Title order={2} ff="Anton, sans-serif" tt="uppercase">
+            Gardes & absences
+          </Title>
+          <Text size="xs" c="dimmed" style={{ fontFamily: MONO }}>
+            week {getWeekNumber(new Date())}_
+          </Text>
+        </Group>
       </Box>
 
       <SimpleGrid cols={{ base: 1, md: 2 }} spacing="md">
@@ -243,39 +306,29 @@ export function DashboardPage() {
           )}
         </Paper>
 
-        {/* Actions de la semaine */}
+        {/* AER absents */}
         <Paper p="md" withBorder style={{ borderColor: "var(--epi-border)" }}>
           <Group mb="md">
-            <ThemeIcon variant="light" color="epitech">
-              <IconCheckbox size={16} />
+            <ThemeIcon variant="light" color="red">
+              <IconUserOff size={16} />
             </ThemeIcon>
             <Text fw={700} ff="Anton, sans-serif" size="lg">
-              Mes actions cette semaine
+              AER absents
             </Text>
           </Group>
           <Divider mb="md" />
-          {actionsLoading ? (
+          {absencesLoading ? (
             <Center py="md">
               <Loader size="sm" />
             </Center>
-          ) : myWeekActions.length === 0 ? (
-            <Stack gap="xs">
-              <Text size="sm" c="dimmed" ta="center" py="md">
-                Aucune action assignée cette semaine
-              </Text>
-              {allMyPendingActions.length > 0 && (
-                <>
-                  <Divider label="Toutes mes actions en cours" labelPosition="center" />
-                  {allMyPendingActions.slice(0, 5).map((a) => (
-                    <ActionRow key={a.id} item={a} />
-                  ))}
-                </>
-              )}
-            </Stack>
+          ) : upcomingAbsences.length === 0 ? (
+            <Text size="sm" c="dimmed" ta="center" py="md">
+              Aucune absence déclarée
+            </Text>
           ) : (
             <Stack gap="xs">
-              {myWeekActions.map((a) => (
-                <ActionRow key={a.id} item={a} />
+              {upcomingAbsences.map((a) => (
+                <AbsenceRow key={a.id} absence={a} />
               ))}
             </Stack>
           )}
@@ -289,31 +342,28 @@ export function DashboardPage() {
 }
 
 function StatChip({
-  icon,
   label,
   value,
+  caption,
 }: {
-  icon: React.ReactNode;
   label: string;
   value: string;
+  caption: string;
 }) {
   return (
-    <Box
-      p="sm"
-      style={{
-        background: "rgba(255,255,255,0.05)",
-        borderRadius: 8,
-        border: "1px solid rgba(255,255,255,0.08)",
-      }}
-    >
-      <Group gap="xs" mb={4}>
-        {icon}
-        <Text size="xs" c="dimmed">
-          {label}
-        </Text>
-      </Group>
-      <Text size="xl" fw={700} ff="Anton, sans-serif">
+    <Box p="md" style={{ background: "rgba(0,0,0,0.28)" }}>
+      <Text
+        size="xs"
+        tt="uppercase"
+        style={{ fontFamily: MONO, color: "rgba(255,255,255,0.7)", letterSpacing: "0.15em" }}
+      >
+        {label}_
+      </Text>
+      <Text fw={700} ff="Anton, sans-serif" c="white" mt={4} style={{ fontSize: "1.8rem", lineHeight: 1.1 }}>
         {value}
+      </Text>
+      <Text size="xs" mt={4} style={{ fontFamily: MONO, color: "rgba(255,255,255,0.6)" }}>
+        {caption}
       </Text>
     </Box>
   );

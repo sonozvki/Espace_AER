@@ -157,7 +157,7 @@ function Content({
             p="xs"
             style={{
               borderRadius: 6,
-              backgroundColor: "var(--mantine-color-dark-5)",
+              backgroundColor: "var(--epi-surface)",
               borderLeft: "2px solid var(--mantine-color-epitech-4)",
             }}
           >
@@ -172,7 +172,7 @@ function Content({
                   </Text>
                   {a.room && (
                     <Group gap={2} wrap="nowrap">
-                      <IconMapPin size={11} style={{ color: "var(--mantine-color-dark-2)" }} />
+                      <IconMapPin size={11} style={{ color: "var(--epi-ghost)" }} />
                       <Text size="xs" c="dimmed" truncate>
                         {a.room.split("/").pop()}
                       </Text>
