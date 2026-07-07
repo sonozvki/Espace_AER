@@ -5,9 +5,6 @@ import { memosController } from "@/modules/memos/memos.controller";
 import { guardsController } from "@/modules/guards/guards.controller";
 import { resourcesController } from "@/modules/resources/resources.controller";
 import { epitechController } from "@/modules/epitech/epitech.controller";
-import { syncWhitelistFromEnv } from "@/auth/whitelist";
-
-await syncWhitelistFromEnv();
 
 export const app = new Elysia()
   .use(
