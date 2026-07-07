@@ -48,12 +48,12 @@ function formatGuardDate(iso: string) {
   return `${DAYS_FR[d.getDay()]} ${d.getDate()} ${MONTHS_FR[d.getMonth()]}`;
 }
 
-function isUpcoming(iso: string) {
+function isUpcoming(iso: string, days = 30) {
   const d = new Date(iso);
   const now = new Date();
   now.setHours(0, 0, 0, 0);
   const limit = new Date(now);
-  limit.setDate(now.getDate() + 30);
+  limit.setDate(now.getDate() + days);
   return d >= now && d <= limit;
 }
 
@@ -161,7 +161,7 @@ export function DashboardPage() {
 
   const freeUpcomingGuards = useMemo<number>(() => {
     if (!guards) return 0;
-    return guards.filter((g) => !g.aerId && isUpcoming(g.date)).length;
+    return guards.filter((g) => !g.aerId && isUpcoming(g.date, 7)).length;
   }, [guards]);
 
   const hour = new Date().getHours();
@@ -244,7 +244,7 @@ export function DashboardPage() {
           <StatChip
             label="Gardes libres"
             value={guardsLoading ? "…" : String(freeUpcomingGuards)}
-            caption="à prendre sous 30 jours"
+            caption="à prendre sous 7 jours"
           />
           <StatChip
             label="Absences déclarées"
