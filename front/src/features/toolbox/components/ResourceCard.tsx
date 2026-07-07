@@ -1,4 +1,4 @@
-import { Paper, Group, Text, Badge, ActionIcon, Anchor, Stack } from "@mantine/core";
+import { Paper, Group, Text, ActionIcon, Anchor, Stack } from "@mantine/core";
 import {
   IconTrash,
   IconLink,
@@ -6,12 +6,14 @@ import {
   IconFileText,
   IconTool,
   IconSchool,
+  IconFileTypePdf,
 } from "@tabler/icons-react";
 import type { Resource } from "../types";
+import { toolboxApi } from "../api";
 
 const CATEGORY_META: Record<string, { icon: React.ReactNode; color: string }> = {
   "Intra Epitech": { icon: <IconSchool size={16} />, color: "blue" },
-  Discord: { icon: <IconBrandDiscord size={16} />, color: "violet" },
+  Workshop: { icon: <IconFileText size={16} />, color: "violet" },
   Documents: { icon: <IconFileText size={16} />, color: "teal" },
   Outils: { icon: <IconTool size={16} />, color: "orange" },
 };
@@ -20,13 +22,22 @@ function getMeta(category: string) {
   return CATEGORY_META[category] ?? { icon: <IconLink size={16} />, color: "gray" };
 }
 
+function formatSize(bytes: number): string {
+  if (bytes >= 1024 * 1024) return `${(bytes / (1024 * 1024)).toFixed(1)} Mo`;
+  return `${Math.max(1, Math.round(bytes / 1024))} Ko`;
+}
+
 interface Props {
   resource: Resource;
   onDelete: () => void;
 }
 
 export function ResourceCard({ resource, onDelete }: Props) {
-  const meta = getMeta(resource.category);
+  const isFile = resource.fileName !== null;
+  const meta = isFile
+    ? { icon: <IconFileTypePdf size={16} />, color: "red" }
+    : getMeta(resource.category);
+  const href = isFile ? toolboxApi.fileUrl(resource.id) : resource.url ?? "#";
 
   return (
     <Paper p="md" withBorder style={{ borderColor: "var(--epi-border)" }}>
@@ -37,7 +48,7 @@ export function ResourceCard({ resource, onDelete }: Props) {
           </Text>
           <Stack gap={4} style={{ flex: 1, minWidth: 0 }}>
             <Anchor
-              href={resource.url}
+              href={href}
               target="_blank"
               rel="noopener noreferrer"
               fw={600}
@@ -52,7 +63,9 @@ export function ResourceCard({ resource, onDelete }: Props) {
               </Text>
             )}
             <Text size="xs" c="dimmed" truncate style={{ opacity: 0.6 }}>
-              {resource.url}
+              {isFile
+                ? `${resource.fileName}${resource.fileSize ? ` · ${formatSize(resource.fileSize)}` : ""}`
+                : resource.url}
             </Text>
           </Stack>
         </Group>

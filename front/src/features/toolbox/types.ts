@@ -1,9 +1,12 @@
 export type Resource = {
   id: number;
   title: string;
-  url: string;
+  url: string | null;
   description: string;
   category: string;
+  fileName: string | null;
+  fileMime: string | null;
+  fileSize: number | null;
   createdAt: string;
   updatedAt: string;
 };
@@ -13,6 +16,13 @@ export type CreateResourceInput = {
   url: string;
   description: string;
   category: string;
+};
+
+export type UploadResourceInput = {
+  title: string;
+  description: string;
+  category: string;
+  file: File;
 };
 
 export const CATEGORIES = [
