@@ -1,49 +1,43 @@
 import { Box, Text, Button, Stack, Tooltip, Badge, Group } from "@mantine/core";
 import type { Guard } from "../types";
 import type { User } from "@/features/shared/types";
-import type { Absence } from "@/features/absences/types";
-import { useAssignGuard } from "../hooks";
-import { useDeclareAbsence, useCancelAbsence } from "@/features/absences/hooks";
+import { useAssignGuard, useAddAbsent, useRemoveAbsent } from "../hooks";
 
 const DAY_HEADERS = ["Lun", "Mar", "Mer", "Jeu", "Ven", "Sam"];
 
 // Mon→0, Tue→1, Wed→2, Thu→3, Fri→4, Sat→5, Sun→skip
 function colIndex(date: Date): number {
-  const dow = date.getDay(); // 0=Sun
+  const dow = date.getUTCDay();
   return dow === 0 ? -1 : dow - 1;
 }
 
 function buildWeeks(year: number, month: number): (Date | null)[][] {
-  const firstDay = new Date(year, month, 1);
-  const lastDay = new Date(year, month + 1, 0);
+  const firstDay = new Date(Date.UTC(year, month, 1));
+  const lastDay = new Date(Date.UTC(year, month + 1, 0));
   const weeks: (Date | null)[][] = [];
   let week: (Date | null)[] = [];
 
-  // Pad start of first week
   const firstCol = colIndex(firstDay);
-  const adjustedFirst = firstCol === -1 ? 5 : firstCol; // if month starts on Sunday, treat as Sat+1 row
+  const adjustedFirst = firstCol === -1 ? 5 : firstCol;
   for (let i = 0; i < adjustedFirst; i++) week.push(null);
 
   const d = new Date(firstDay);
   while (d <= lastDay) {
     const col = colIndex(d);
     if (col === -1) {
-      // Sunday: close current week, start new one
       while (week.length < 6) week.push(null);
       if (week.some((c) => c !== null)) weeks.push(week);
       week = [];
-      d.setDate(d.getDate() + 1);
+      d.setUTCDate(d.getUTCDate() + 1);
       continue;
     }
     week.push(new Date(d));
     if (col === 5) {
-      // Saturday: end of week
       weeks.push(week);
       week = [];
     }
-    d.setDate(d.getDate() + 1);
+    d.setUTCDate(d.getUTCDate() + 1);
   }
-  // Last partial week
   if (week.length > 0) {
     while (week.length < 6) week.push(null);
     weeks.push(week);
@@ -52,15 +46,19 @@ function buildWeeks(year: number, month: number): (Date | null)[][] {
 }
 
 function toDateKey(d: Date) {
-  const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, "0");
-  const day = String(d.getDate()).padStart(2, "0");
+  const y = d.getUTCFullYear();
+  const m = String(d.getUTCMonth() + 1).padStart(2, "0");
+  const day = String(d.getUTCDate()).padStart(2, "0");
   return `${y}-${m}-${day}`;
 }
 
 function isToday(d: Date) {
   const t = new Date();
-  return d.getFullYear() === t.getFullYear() && d.getMonth() === t.getMonth() && d.getDate() === t.getDate();
+  return (
+    d.getUTCFullYear() === t.getFullYear() &&
+    d.getUTCMonth() === t.getMonth() &&
+    d.getUTCDate() === t.getDate()
+  );
 }
 
 function isPast(d: Date) {
@@ -72,25 +70,30 @@ function isPast(d: Date) {
 interface DayCellProps {
   day: Date;
   guard: Guard | null;
-  absences: Absence[];
   currentUser: User | null;
 }
 
-function DayCell({ day, guard, absences, currentUser }: DayCellProps) {
+function DayCell({ day, guard, currentUser }: DayCellProps) {
   const assign = useAssignGuard();
-  const declareAbsence = useDeclareAbsence();
-  const cancelAbsence = useCancelAbsence();
+  const addAbsent = useAddAbsent();
+  const removeAbsent = useRemoveAbsent();
 
   const past = isPast(day);
   const today = isToday(day);
-  const isMyGuard = guard?.aerId === currentUser?.id;
-  const isFree = !guard?.aerId;
-  const isAdmin = currentUser?.role === "ADMIN";
-  const myAbsence = absences.find((a) => a.userId === currentUser?.id);
+  const isMyGuard = guard?.guardAerId === currentUser?.id;
+  const isFree = !guard?.guardAerId;
+  const myAbsence = guard?.absentAers.find((u) => u.id === currentUser?.id);
 
-  const bgColor = today
+  const isHoliday = guard?.isPublicHoliday;
+  const isVacation = guard?.isSchoolHoliday && !guard?.isPublicHoliday;
+
+  const bgColor = isHoliday
+    ? "var(--mantine-color-yellow-0)"
+    : isVacation
+    ? "var(--mantine-color-blue-0)"
+    : today
     ? "var(--epi-today-bg)"
-    : guard?.aerId
+    : guard?.guardAerId
     ? "var(--epi-surface)"
     : "var(--epi-bg)";
 
@@ -114,16 +117,28 @@ function DayCell({ day, guard, absences, currentUser }: DayCellProps) {
         gap: 6,
       }}
     >
-      <Text size="md" fw={today ? 700 : 500} c={today ? "epitech.4" : "dimmed"}>
-        {day.getDate()}
-      </Text>
+      <Group gap={4} align="flex-start" wrap="nowrap">
+        <Text size="md" fw={today ? 700 : 500} c={today ? "epitech.4" : "dimmed"} style={{ flexShrink: 0 }}>
+          {day.getUTCDate()}
+        </Text>
+        {guard?.isPublicHoliday && guard.publicHolidayName && (
+          <Text size="xs" c="yellow.7" fw={600} style={{ lineHeight: 1.3 }} lineClamp={2}>
+            {guard.publicHolidayName}
+          </Text>
+        )}
+        {guard?.isSchoolHoliday && !guard.isPublicHoliday && guard.schoolHolidayName && (
+          <Text size="xs" c="blue.5" style={{ lineHeight: 1.3 }} lineClamp={2}>
+            {guard.schoolHolidayName}
+          </Text>
+        )}
+      </Group>
 
       {guard ? (
         <Stack gap={4} style={{ flex: 1 }}>
-          {guard.aer ? (
-            <Tooltip label={guard.aer.email} withArrow>
-              <Badge size="md" color={isMyGuard ? "epitech" : "gray"} variant="light" maw="100%">
-                {guard.aer.name.split(" ")[0]}
+          {guard.guardAer ? (
+            <Tooltip label={guard.guardAer.email} withArrow>
+              <Badge size="md" color={isMyGuard ? "epitech" : "gray"} variant="filled" maw="100%">
+                {guard.guardAer.name.split(" ")[0]}
               </Badge>
             </Tooltip>
           ) : (
@@ -132,10 +147,10 @@ function DayCell({ day, guard, absences, currentUser }: DayCellProps) {
             </Text>
           )}
 
-          {absences.map((a) => (
-            <Tooltip key={a.id} label={`${a.user.name} absent ce jour`} withArrow>
-              <Badge size="md" color="red" variant="filled" maw="100%">
-                {a.user.name.split(" ")[0]} ✕
+          {guard.absentAers.map((u) => (
+            <Tooltip key={u.id} label={`${u.name} absent ce jour`} withArrow>
+              <Badge size="sm" color="red" variant="filled" maw="100%">
+                {u.name.split(" ")[0]} ✕
               </Badge>
             </Tooltip>
           ))}
@@ -145,21 +160,21 @@ function DayCell({ day, guard, absences, currentUser }: DayCellProps) {
               {isFree && !myAbsence && (
                 <Button
                   size="xs"
-                  variant="light"
+                  variant="filled"
                   color="epitech"
                   loading={assign.isPending}
-                  onClick={() => assign.mutate({ id: guard.id, aerId: currentUser.id })}
+                  onClick={() => assign.mutate({ id: guard.id, guardAerId: currentUser.id })}
                 >
                   Prendre
                 </Button>
               )}
-              {(isMyGuard || isAdmin) && guard.aer && (
+              {isMyGuard && guard.guardAer && (
                 <Button
                   size="xs"
-                  variant="subtle"
+                  variant="filled"
                   color="red"
                   loading={assign.isPending}
-                  onClick={() => assign.mutate({ id: guard.id, aerId: null })}
+                  onClick={() => assign.mutate({ id: guard.id, guardAerId: null })}
                 >
                   Libérer
                 </Button>
@@ -167,20 +182,20 @@ function DayCell({ day, guard, absences, currentUser }: DayCellProps) {
               {!myAbsence ? (
                 <Button
                   size="xs"
-                  variant="subtle"
-                  color="red"
-                  loading={declareAbsence.isPending}
-                  onClick={() => declareAbsence.mutate(toDateKey(day))}
+                  variant="filled"
+                  color="orange"
+                  loading={addAbsent.isPending}
+                  onClick={() => addAbsent.mutate(guard.id)}
                 >
                   Absent
                 </Button>
               ) : (
                 <Button
                   size="xs"
-                  variant="subtle"
+                  variant="filled"
                   color="green"
-                  loading={cancelAbsence.isPending}
-                  onClick={() => cancelAbsence.mutate(myAbsence.id)}
+                  loading={removeAbsent.isPending}
+                  onClick={() => removeAbsent.mutate(guard.id)}
                 >
                   Présent
                 </Button>
@@ -188,10 +203,7 @@ function DayCell({ day, guard, absences, currentUser }: DayCellProps) {
             </Group>
           )}
         </Stack>
-      ) : (
-        <Text size="sm" c="dimmed" fs="italic">
-        </Text>
-      )}
+      ) : null}
     </Box>
   );
 }
@@ -200,16 +212,14 @@ interface Props {
   year: number;
   month: number;
   guardsByDate: Map<string, Guard>;
-  absencesByDate: Map<string, Absence[]>;
   currentUser: User | null;
 }
 
-export function GuardCalendar({ year, month, guardsByDate, absencesByDate, currentUser }: Props) {
+export function GuardCalendar({ year, month, guardsByDate, currentUser }: Props) {
   const weeks = buildWeeks(year, month);
 
   return (
     <Box>
-      {/* Header */}
       <Box
         style={{
           display: "grid",
@@ -225,7 +235,6 @@ export function GuardCalendar({ year, month, guardsByDate, absencesByDate, curre
         ))}
       </Box>
 
-      {/* Weeks */}
       <Stack gap={8}>
         {weeks.map((week, wi) => (
           <Box
@@ -242,7 +251,6 @@ export function GuardCalendar({ year, month, guardsByDate, absencesByDate, curre
                   key={day.toISOString()}
                   day={day}
                   guard={guardsByDate.get(toDateKey(day)) ?? null}
-                  absences={absencesByDate.get(toDateKey(day)) ?? []}
                   currentUser={currentUser}
                 />
               ) : (

@@ -22,10 +22,8 @@ import {
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { useGuards } from "@/features/guards/hooks";
-import { useAbsences } from "@/features/absences/hooks";
 import { EpitechPanel } from "@/features/epitech/components/EpitechPanel";
-import type { Guard } from "@/features/guards/types";
-import type { Absence } from "@/features/absences/types";
+import type { Guard, GuardUser } from "@/features/guards/types";
 
 const MONO = '"IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace';
 
@@ -43,9 +41,9 @@ const MONTHS_FR = [
   "juil.", "août", "sept.", "oct.", "nov.", "déc.",
 ];
 
-function formatGuardDate(iso: string) {
+function formatDate(iso: string) {
   const d = new Date(iso);
-  return `${DAYS_FR[d.getDay()]} ${d.getDate()} ${MONTHS_FR[d.getMonth()]}`;
+  return `${DAYS_FR[d.getUTCDay()]} ${d.getUTCDate()} ${MONTHS_FR[d.getUTCMonth()]}`;
 }
 
 function isUpcoming(iso: string, days = 30) {
@@ -68,44 +66,29 @@ function GuardCard({ guard }: { guard: Guard }) {
       p="sm"
       withBorder
       style={{
-        borderColor: isToday
-          ? "var(--mantine-color-epitech-4)"
-          : "var(--epi-border)",
+        borderColor: isToday ? "var(--mantine-color-epitech-4)" : "var(--epi-border)",
         borderLeftWidth: isToday ? 3 : 1,
       }}
     >
       <Group gap="sm">
-        <ThemeIcon
-          size="md"
-          variant="light"
-          color={isToday ? "epitech" : "gray"}
-        >
+        <ThemeIcon size="md" variant="light" color={isToday ? "epitech" : "gray"}>
           <IconShield size={14} />
         </ThemeIcon>
-        <Stack gap={0}>
-          <Text size="sm" fw={isToday ? 700 : 500}>
-            {formatGuardDate(guard.date)}
-            {isToday && (
-              <Badge size="xs" color="epitech" variant="filled" ml="xs">
-                Aujourd'hui
-              </Badge>
-            )}
-          </Text>
-        </Stack>
+        <Text size="sm" fw={isToday ? 700 : 500}>
+          {formatDate(guard.date)}
+          {isToday && (
+            <Badge size="xs" color="epitech" variant="filled" ml="xs">
+              Aujourd'hui
+            </Badge>
+          )}
+        </Text>
       </Group>
     </Paper>
   );
 }
 
-function formatAbsenceDate(iso: string) {
-  const d = new Date(iso);
-  const day = String(d.getDate()).padStart(2, "0");
-  const month = String(d.getMonth() + 1).padStart(2, "0");
-  return `${day}/${month}/${d.getFullYear()}`;
-}
-
-function AbsenceRow({ absence }: { absence: Absence }) {
-  const d = new Date(absence.date);
+function AbsenceRow({ date, user }: { date: string; user: GuardUser }) {
+  const d = new Date(date);
   const today = new Date();
   today.setHours(0, 0, 0, 0);
   const isToday = d.getTime() === today.getTime();
@@ -124,7 +107,7 @@ function AbsenceRow({ absence }: { absence: Absence }) {
           <IconUserOff size={14} />
         </ThemeIcon>
         <Text size="sm" fw={isToday ? 700 : 500}>
-          {absence.user.name.split(" ")[0]} absent : {formatAbsenceDate(absence.date)}
+          {user.name.split(" ")[0]} absent : {formatDate(date)}
           {isToday && (
             <Badge size="xs" color="red" variant="filled" ml="xs">
               Aujourd'hui
@@ -139,34 +122,36 @@ function AbsenceRow({ absence }: { absence: Absence }) {
 export function DashboardPage() {
   const { user } = useAuth();
   const { data: guards, isLoading: guardsLoading } = useGuards();
-  const { data: absences, isLoading: absencesLoading } = useAbsences();
 
-  const upcomingAbsences = useMemo<Absence[]>(() => {
-    if (!absences) return [];
+  const upcomingAbsences = useMemo<Array<{ date: string; user: GuardUser }>>(() => {
+    if (!guards) return [];
     const today = new Date();
     today.setHours(0, 0, 0, 0);
-    return absences
-      .filter((a) => new Date(a.date) >= today)
+    const result: Array<{ date: string; user: GuardUser }> = [];
+    for (const g of guards) {
+      if (new Date(g.date) < today) continue;
+      for (const u of g.absentAers) result.push({ date: g.date, user: u });
+    }
+    return result
       .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
       .slice(0, 8);
-  }, [absences]);
+  }, [guards]);
 
   const myUpcomingGuards = useMemo<Guard[]>(() => {
     if (!guards || !user) return [];
     return guards
-      .filter((g) => g.aerId === user.id && isUpcoming(g.date))
+      .filter((g) => g.guardAerId === user.id && isUpcoming(g.date))
       .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
       .slice(0, 8);
   }, [guards, user]);
 
   const freeUpcomingGuards = useMemo<number>(() => {
     if (!guards) return 0;
-    return guards.filter((g) => !g.aerId && isUpcoming(g.date, 7)).length;
+    return guards.filter((g) => !g.guardAerId && isUpcoming(g.date, 7)).length;
   }, [guards]);
 
   const hour = new Date().getHours();
-  const greeting =
-    hour < 12 ? "Bonjour" : hour < 18 ? "Bon après-midi" : "Bonsoir";
+  const greeting = hour < 12 ? "Bonjour" : hour < 18 ? "Bon après-midi" : "Bonsoir";
   const navigate = useNavigate();
 
   return (
@@ -248,7 +233,7 @@ export function DashboardPage() {
           />
           <StatChip
             label="Absences déclarées"
-            value={absencesLoading ? "…" : String(upcomingAbsences.length)}
+            value={guardsLoading ? "…" : String(upcomingAbsences.length)}
             caption="à venir"
           />
         </SimpleGrid>
@@ -290,18 +275,14 @@ export function DashboardPage() {
           </Group>
           <Divider mb="md" />
           {guardsLoading ? (
-            <Center py="md">
-              <Loader size="sm" />
-            </Center>
+            <Center py="md"><Loader size="sm" /></Center>
           ) : myUpcomingGuards.length === 0 ? (
             <Text size="sm" c="dimmed" ta="center" py="md">
               Aucune garde à venir (30 jours)
             </Text>
           ) : (
             <Stack gap="xs">
-              {myUpcomingGuards.map((g) => (
-                <GuardCard key={g.id} guard={g} />
-              ))}
+              {myUpcomingGuards.map((g) => <GuardCard key={g.id} guard={g} />)}
             </Stack>
           )}
         </Paper>
@@ -317,18 +298,16 @@ export function DashboardPage() {
             </Text>
           </Group>
           <Divider mb="md" />
-          {absencesLoading ? (
-            <Center py="md">
-              <Loader size="sm" />
-            </Center>
+          {guardsLoading ? (
+            <Center py="md"><Loader size="sm" /></Center>
           ) : upcomingAbsences.length === 0 ? (
             <Text size="sm" c="dimmed" ta="center" py="md">
               Aucune absence déclarée
             </Text>
           ) : (
             <Stack gap="xs">
-              {upcomingAbsences.map((a) => (
-                <AbsenceRow key={a.id} absence={a} />
+              {upcomingAbsences.map((a, i) => (
+                <AbsenceRow key={`${a.user.id}-${a.date}-${i}`} date={a.date} user={a.user} />
               ))}
             </Stack>
           )}
@@ -341,15 +320,7 @@ export function DashboardPage() {
   );
 }
 
-function StatChip({
-  label,
-  value,
-  caption,
-}: {
-  label: string;
-  value: string;
-  caption: string;
-}) {
+function StatChip({ label, value, caption }: { label: string; value: string; caption: string }) {
   return (
     <Box p="md" style={{ background: "rgba(0,0,0,0.28)" }}>
       <Text
