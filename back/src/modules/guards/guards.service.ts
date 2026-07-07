@@ -114,8 +114,23 @@ export const guardsService = {
     const guard = await guardsRepository.findById(guardId);
     if (!guard) throw new Error("NOT_FOUND");
     if (startOfDay(guard.date) < startOfDay(new Date())) throw new Error("PAST_GUARD");
-    const isAbsent = guard.absentAers.some((u) => u.id === userId);
-    if (!isAbsent) throw new Error("NOT_ABSENT");
+    if (!guard.absentAers.some((u) => u.id === userId)) throw new Error("NOT_ABSENT");
     return guardsRepository.removeAbsent(guardId, userId);
+  },
+
+  async declareUnavailable(guardId: number, userId: number) {
+    const guard = await guardsRepository.findById(guardId);
+    if (!guard) throw new Error("NOT_FOUND");
+    if (startOfDay(guard.date) < startOfDay(new Date())) throw new Error("PAST_GUARD");
+    if (guard.guardAerId === userId) await guardsRepository.assign(guardId, null);
+    return guardsRepository.addUnavailable(guardId, userId);
+  },
+
+  async cancelUnavailable(guardId: number, userId: number) {
+    const guard = await guardsRepository.findById(guardId);
+    if (!guard) throw new Error("NOT_FOUND");
+    if (startOfDay(guard.date) < startOfDay(new Date())) throw new Error("PAST_GUARD");
+    if (!guard.unavailableAers.some((u) => u.id === userId)) throw new Error("NOT_UNAVAILABLE");
+    return guardsRepository.removeUnavailable(guardId, userId);
   },
 };

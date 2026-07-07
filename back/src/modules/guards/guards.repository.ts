@@ -5,6 +5,7 @@ const AER_SELECT = { select: { id: true, name: true, email: true, role: true } }
 const GUARD_INCLUDE = {
   guardAer: AER_SELECT,
   absentAers: AER_SELECT,
+  unavailableAers: AER_SELECT,
 } as const;
 
 interface GuardInput {
@@ -71,6 +72,22 @@ export const guardsRepository = {
     return prisma.guard.update({
       where: { id },
       data: { absentAers: { disconnect: { id: userId } } },
+      include: GUARD_INCLUDE,
+    });
+  },
+
+  addUnavailable(id: number, userId: number) {
+    return prisma.guard.update({
+      where: { id },
+      data: { unavailableAers: { connect: { id: userId } } },
+      include: GUARD_INCLUDE,
+    });
+  },
+
+  removeUnavailable(id: number, userId: number) {
+    return prisma.guard.update({
+      where: { id },
+      data: { unavailableAers: { disconnect: { id: userId } } },
       include: GUARD_INCLUDE,
     });
   },

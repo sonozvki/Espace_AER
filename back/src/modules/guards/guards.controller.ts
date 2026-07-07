@@ -46,6 +46,32 @@ export const guardsController = new Elysia({ prefix: "/guards" })
     }
   }, { params: t.Object({ id: t.String() }) })
 
+  .post("/:id/unavailable", async ({ params, session }) => {
+    try {
+      return await guardsService.declareUnavailable(Number(params.id), Number(session.sub));
+    } catch (err) {
+      if (err instanceof Error && err.message === "NOT_FOUND")
+        return httpStatus(404, { error: "Garde introuvable" });
+      if (err instanceof Error && err.message === "PAST_GUARD")
+        return httpStatus(422, { error: "Impossible de déclarer une indisponibilité sur une garde passée" });
+      throw err;
+    }
+  }, { params: t.Object({ id: t.String() }) })
+
+  .delete("/:id/unavailable", async ({ params, session }) => {
+    try {
+      return await guardsService.cancelUnavailable(Number(params.id), Number(session.sub));
+    } catch (err) {
+      if (err instanceof Error && err.message === "NOT_FOUND")
+        return httpStatus(404, { error: "Garde introuvable" });
+      if (err instanceof Error && err.message === "PAST_GUARD")
+        return httpStatus(422, { error: "Impossible de modifier une garde passée" });
+      if (err instanceof Error && err.message === "NOT_UNAVAILABLE")
+        return httpStatus(409, { error: "Tu n'es pas déclaré indisponible ce jour" });
+      throw err;
+    }
+  }, { params: t.Object({ id: t.String() }) })
+
   .delete("/:id/absent", async ({ params, session }) => {
     try {
       return await guardsService.cancelAbsent(Number(params.id), Number(session.sub));

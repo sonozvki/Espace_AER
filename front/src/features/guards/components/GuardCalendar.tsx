@@ -1,7 +1,7 @@
 import { Box, Text, Button, Stack, Tooltip, Badge, Group } from "@mantine/core";
 import type { Guard } from "../types";
 import type { User } from "@/features/shared/types";
-import { useAssignGuard, useAddAbsent, useRemoveAbsent } from "../hooks";
+import { useAssignGuard, useAddAbsent, useRemoveAbsent, useAddUnavailable, useRemoveUnavailable } from "../hooks";
 
 const DAY_HEADERS = ["Lun", "Mar", "Mer", "Jeu", "Ven", "Sam"];
 
@@ -77,12 +77,15 @@ function DayCell({ day, guard, currentUser }: DayCellProps) {
   const assign = useAssignGuard();
   const addAbsent = useAddAbsent();
   const removeAbsent = useRemoveAbsent();
+  const addUnavailable = useAddUnavailable();
+  const removeUnavailable = useRemoveUnavailable();
 
   const past = isPast(day);
   const today = isToday(day);
   const isMyGuard = guard?.guardAerId === currentUser?.id;
   const isFree = !guard?.guardAerId;
   const myAbsence = guard?.absentAers.find((u) => u.id === currentUser?.id);
+  const myUnavailability = guard?.unavailableAers.find((u) => u.id === currentUser?.id);
 
   const isHoliday = guard?.isPublicHoliday;
   const isVacation = guard?.isSchoolHoliday && !guard?.isPublicHoliday;
@@ -108,8 +111,8 @@ function DayCell({ day, guard, currentUser }: DayCellProps) {
       style={{
         border: `1px solid ${borderColor}`,
         borderRadius: 8,
-        padding: "10px 12px",
-        minHeight: 120,
+        padding: "12px 14px",
+        minHeight: 170,
         background: bgColor,
         opacity: past ? 0.5 : 1,
         display: "flex",
@@ -155,9 +158,17 @@ function DayCell({ day, guard, currentUser }: DayCellProps) {
             </Tooltip>
           ))}
 
+          {guard.unavailableAers.map((u) => (
+            <Tooltip key={u.id} label={`${u.name} indisponible ce jour`} withArrow>
+              <Badge size="sm" color="violet" variant="filled" maw="100%">
+                {u.name.split(" ")[0]} —
+              </Badge>
+            </Tooltip>
+          ))}
+
           {!past && currentUser && (
             <Group gap={6} mt="auto" wrap="wrap">
-              {isFree && !myAbsence && (
+              {isFree && !myAbsence && !myUnavailability && (
                 <Button
                   size="xs"
                   variant="filled"
@@ -198,6 +209,27 @@ function DayCell({ day, guard, currentUser }: DayCellProps) {
                   onClick={() => removeAbsent.mutate(guard.id)}
                 >
                   Présent
+                </Button>
+              )}
+              {!myUnavailability ? (
+                <Button
+                  size="xs"
+                  variant="filled"
+                  color="violet"
+                  loading={addUnavailable.isPending}
+                  onClick={() => addUnavailable.mutate(guard.id)}
+                >
+                  Indispo
+                </Button>
+              ) : (
+                <Button
+                  size="xs"
+                  variant="filled"
+                  color="green"
+                  loading={removeUnavailable.isPending}
+                  onClick={() => removeUnavailable.mutate(guard.id)}
+                >
+                  Dispo
                 </Button>
               )}
             </Group>
