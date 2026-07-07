@@ -19,22 +19,11 @@ model User {
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
-  guards          Guard[]
+  guardsOnDuty    Guard[]  @relation("GuardDuty")
+  guardAbsences   Guard[]  @relation("GuardAbsences")
   swapRequests    GuardSwapRequest[] @relation("requester")
   swapAcceptances GuardSwapRequest[] @relation("accepter")
   auditLogs       AuditLog[]
-  absences        Absence[]
-}
-
-// Absence déclarée par un AER sur une journée (indépendante des gardes)
-model Absence {
-  id        Int      @id @default(autoincrement())
-  date      DateTime @db.Date
-  createdAt DateTime @default(now())
-  user   User @relation(fields: [userId], references: [id], onDelete: Cascade)
-  userId Int
-  @@unique([date, userId])
-  @@index([date])
 }
 
 model Whitelist {
@@ -43,7 +32,6 @@ model Whitelist {
   role      Role
   createdAt DateTime @default(now())
 }
-
 
 model Memo {
   id        Int      @id @default(autoincrement())
@@ -59,10 +47,23 @@ model Guard {
   date      DateTime @db.Date
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-  aer   User? @relation(fields: [aerId], references: [id])
-  aerId Int?
+
+  // AER de garde ce jour
+  guardAer   User? @relation("GuardDuty", fields: [guardAerId], references: [id])
+  guardAerId Int?
+
+  // AERs absents ce jour (many-to-many implicite)
+  absentAers User[] @relation("GuardAbsences")
+
+  // Métadonnées calendaires (renseignées à la génération)
+  isPublicHoliday   Boolean @default(false)
+  publicHolidayName String?
+  isSchoolHoliday   Boolean @default(false)
+  schoolHolidayName String?
+
   swapRequests GuardSwapRequest[] @relation("source")
   swapTargets  GuardSwapRequest[] @relation("target")
+
   @@unique([date])
   @@index([date])
 }
@@ -114,7 +115,5 @@ model Resource {
 }
 
 // à noter V2 : Suivi étudiants (à activer en v2)
-// Faire la partie mouihihihihi:
 // -> Décommenter les modèles Student, Grade, GradeSnapshot, Project,
-// -> Absence, StudentNote, IntraToken quand la feature sera développée.
-// Statistiques des AER: % guardes, activités, stumpers...
+// -> StudentNote, IntraToken quand la feature sera développée.
