@@ -35,24 +35,33 @@ export function Layout() {
       navbar={{ width: 220, breakpoint: "sm", collapsed: { mobile: !opened } }}
       padding="md"
     >
-      <AppShell.Header bg="var(--epi-panel)" style={{ borderBottom: "1px solid var(--epi-border)" }}>
+      <AppShell.Header
+        bg={colorScheme === "light" ? "var(--epi-blue)" : "var(--epi-panel)"}
+        style={{ borderBottom: colorScheme === "light" ? "none" : "1px solid var(--epi-border)" }}
+      >
         <Group h="100%" px="md" justify="space-between">
           <Group>
-            <Burger opened={opened} onClick={toggle} hiddenFrom="sm" size="sm" />
-            <Text ff="Anton, sans-serif" size="xl" c="epitech.4">
+            <Burger
+              opened={opened}
+              onClick={toggle}
+              hiddenFrom="sm"
+              size="sm"
+              color={colorScheme === "light" ? "white" : undefined}
+            />
+            <Text ff="Anton, sans-serif" size="xl" c={colorScheme === "light" ? "white" : "epitech.4"}>
               Espace AER
             </Text>
           </Group>
           <Group gap="sm">
             <ActionIcon
               variant="subtle"
-              color="gray"
+              color={colorScheme === "light" ? "white" : "gray"}
               onClick={toggleColorScheme}
               aria-label="Basculer entre mode clair et sombre"
             >
               {colorScheme === "dark" ? <IconSun size={18} /> : <IconMoon size={18} />}
             </ActionIcon>
-            <Text size="sm" c="dimmed">
+            <Text size="sm" c={colorScheme === "light" ? "white" : "dimmed"}>
               {user?.name}
             </Text>
           </Group>
