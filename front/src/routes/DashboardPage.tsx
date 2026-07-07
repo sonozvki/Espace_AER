@@ -16,7 +16,6 @@ import {
 } from "@mantine/core";
 import {
   IconShield,
-  IconCheckbox,
   IconUserOff,
   IconArrowRight,
 } from "@tabler/icons-react";
@@ -24,12 +23,9 @@ import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { useGuards } from "@/features/guards/hooks";
 import { useAbsences } from "@/features/absences/hooks";
-import { useActionItems } from "@/features/action-items/hooks";
 import { EpitechPanel } from "@/features/epitech/components/EpitechPanel";
-import { STATUS_COLORS, STATUS_LABELS } from "@/features/action-items/types";
 import type { Guard } from "@/features/guards/types";
 import type { Absence } from "@/features/absences/types";
-import type { ActionItem } from "@/features/action-items/types";
 
 const MONO = '"IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace';
 
@@ -50,24 +46,6 @@ const MONTHS_FR = [
 function formatGuardDate(iso: string) {
   const d = new Date(iso);
   return `${DAYS_FR[d.getDay()]} ${d.getDate()} ${MONTHS_FR[d.getMonth()]}`;
-}
-
-function getWeekBounds() {
-  const now = new Date();
-  const day = now.getDay();
-  const monday = new Date(now);
-  monday.setDate(now.getDate() - ((day + 6) % 7));
-  monday.setHours(0, 0, 0, 0);
-  const sunday = new Date(monday);
-  sunday.setDate(monday.getDate() + 6);
-  sunday.setHours(23, 59, 59, 999);
-  return { monday, sunday };
-}
-
-function isThisWeek(iso: string) {
-  const { monday, sunday } = getWeekBounds();
-  const d = new Date(iso);
-  return d >= monday && d <= sunday;
 }
 
 function isUpcoming(iso: string) {
@@ -158,38 +136,10 @@ function AbsenceRow({ absence }: { absence: Absence }) {
   );
 }
 
-function ActionRow({ item }: { item: ActionItem }) {
-  return (
-    <Box
-      p="xs"
-      style={{
-        borderRadius: 6,
-        backgroundColor: "var(--epi-surface)",
-        borderLeft: `2px solid var(--mantine-color-${STATUS_COLORS[item.status]}-5)`,
-      }}
-    >
-      <Group justify="space-between" wrap="nowrap">
-        <Stack gap={2} style={{ flex: 1, minWidth: 0 }}>
-          <Text size="sm" truncate>
-            {item.content}
-          </Text>
-          <Text size="xs" c="dimmed" truncate>
-            {item.memo.title}
-          </Text>
-        </Stack>
-        <Badge size="xs" color={STATUS_COLORS[item.status]} variant="light" style={{ flexShrink: 0 }}>
-          {STATUS_LABELS[item.status]}
-        </Badge>
-      </Group>
-    </Box>
-  );
-}
-
 export function DashboardPage() {
   const { user } = useAuth();
   const { data: guards, isLoading: guardsLoading } = useGuards();
   const { data: absences, isLoading: absencesLoading } = useAbsences();
-  const { data: actionItems, isLoading: actionsLoading } = useActionItems();
 
   const upcomingAbsences = useMemo<Absence[]>(() => {
     if (!absences) return [];
@@ -209,25 +159,10 @@ export function DashboardPage() {
       .slice(0, 8);
   }, [guards, user]);
 
-  const myWeekActions = useMemo<ActionItem[]>(() => {
-    if (!actionItems || !user) return [];
-    return actionItems.filter(
-      (a) =>
-        a.assigneeId === user.id &&
-        a.status !== "DONE" &&
-        a.status !== "CANCELLED" &&
-        (a.deadline ? isThisWeek(a.deadline) : isThisWeek(a.createdAt))
-    );
-  }, [actionItems, user]);
-
-  const allMyPendingActions = useMemo<ActionItem[]>(() => {
-    if (!actionItems || !user) return [];
-    return actionItems.filter(
-      (a) =>
-        a.assigneeId === user.id &&
-        (a.status === "PENDING" || a.status === "IN_PROGRESS")
-    );
-  }, [actionItems, user]);
+  const freeUpcomingGuards = useMemo<number>(() => {
+    if (!guards) return 0;
+    return guards.filter((g) => !g.aerId && isUpcoming(g.date)).length;
+  }, [guards]);
 
   const hour = new Date().getHours();
   const greeting =
@@ -268,7 +203,7 @@ export function DashboardPage() {
           size="sm"
           style={{ fontFamily: MONO, color: "rgba(255,255,255,0.75)", letterSpacing: "0.2em" }}
         >
-          {"< Nice • Espace AER • Promotion 2029 />"}
+          {"< Espace AER />"}
         </Text>
         <Title
           order={1}
@@ -302,19 +237,19 @@ export function DashboardPage() {
         {/* Stats rapides */}
         <SimpleGrid cols={{ base: 1, sm: 3 }} mt="xl" spacing={2}>
           <StatChip
-            label="Gardes à venir"
+            label="Mes gardes à venir"
             value={guardsLoading ? "…" : String(myUpcomingGuards.length)}
             caption="sur les 30 prochains jours"
           />
           <StatChip
-            label="Actions cette semaine"
-            value={actionsLoading ? "…" : String(myWeekActions.length)}
-            caption="deadline avant dimanche"
+            label="Gardes libres"
+            value={guardsLoading ? "…" : String(freeUpcomingGuards)}
+            caption="à prendre sous 30 jours"
           />
           <StatChip
-            label="Actions en cours"
-            value={actionsLoading ? "…" : String(allMyPendingActions.length)}
-            caption="à traiter"
+            label="Absences déclarées"
+            value={absencesLoading ? "…" : String(upcomingAbsences.length)}
+            caption="à venir"
           />
         </SimpleGrid>
       </Box>
@@ -334,7 +269,7 @@ export function DashboardPage() {
         </Group>
         <Group justify="space-between" align="baseline" mt={4}>
           <Title order={2} ff="Anton, sans-serif" tt="uppercase">
-            Gardes & actions
+            Gardes & absences
           </Title>
           <Text size="xs" c="dimmed" style={{ fontFamily: MONO }}>
             week {getWeekNumber(new Date())}_
@@ -371,43 +306,6 @@ export function DashboardPage() {
           )}
         </Paper>
 
-        {/* Actions de la semaine */}
-        <Paper p="md" withBorder style={{ borderColor: "var(--epi-border)" }}>
-          <Group mb="md">
-            <ThemeIcon variant="light" color="epitech">
-              <IconCheckbox size={16} />
-            </ThemeIcon>
-            <Text fw={700} ff="Anton, sans-serif" size="lg">
-              Mes actions cette semaine
-            </Text>
-          </Group>
-          <Divider mb="md" />
-          {actionsLoading ? (
-            <Center py="md">
-              <Loader size="sm" />
-            </Center>
-          ) : myWeekActions.length === 0 ? (
-            <Stack gap="xs">
-              <Text size="sm" c="dimmed" ta="center" py="md">
-                Aucune action assignée cette semaine
-              </Text>
-              {allMyPendingActions.length > 0 && (
-                <>
-                  <Divider label="Toutes mes actions en cours" labelPosition="center" />
-                  {allMyPendingActions.slice(0, 5).map((a) => (
-                    <ActionRow key={a.id} item={a} />
-                  ))}
-                </>
-              )}
-            </Stack>
-          ) : (
-            <Stack gap="xs">
-              {myWeekActions.map((a) => (
-                <ActionRow key={a.id} item={a} />
-              ))}
-            </Stack>
-          )}
-        </Paper>
         {/* AER absents */}
         <Paper p="md" withBorder style={{ borderColor: "var(--epi-border)" }}>
           <Group mb="md">

@@ -4,7 +4,6 @@ import { authController } from "@/auth/auth.controller";
 import { memosController } from "@/modules/memos/memos.controller";
 import { guardsController } from "@/modules/guards/guards.controller";
 import { absencesController } from "@/modules/absences/absences.controller";
-import { actionItemsController } from "@/modules/action-items/action-items.controller";
 import { resourcesController } from "@/modules/resources/resources.controller";
 import { epitechController } from "@/modules/epitech/epitech.controller";
 import { syncWhitelistFromEnv } from "@/auth/whitelist";
@@ -24,7 +23,6 @@ export const app = new Elysia()
       .use(memosController)
       .use(guardsController)
       .use(absencesController)
-      .use(actionItemsController)
       .use(resourcesController)
       .use(epitechController)
   )

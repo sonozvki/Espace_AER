@@ -20,7 +20,6 @@ model User {
   updatedAt    DateTime @updatedAt
 
   guards          Guard[]
-  actionItems     ActionItem[]
   swapRequests    GuardSwapRequest[] @relation("requester")
   swapAcceptances GuardSwapRequest[] @relation("accepter")
   auditLogs       AuditLog[]
@@ -52,30 +51,7 @@ model Memo {
   content   String   @default("")
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-  actionItems ActionItem[]
   @@index([createdAt(sort: Desc)])
-}
-
-model ActionItem {
-  id         Int          @id @default(autoincrement())
-  content    String
-  status     ActionStatus @default(PENDING)
-  deadline   DateTime?
-  createdAt  DateTime     @default(now())
-  updatedAt  DateTime     @updatedAt
-  memo       Memo  @relation(fields: [memoId], references: [id], onDelete: Cascade)
-  memoId     Int
-  assignee   User? @relation(fields: [assigneeId], references: [id])
-  assigneeId Int?
-  @@index([status])
-  @@index([assigneeId])
-}
-
-enum ActionStatus {
-  PENDING
-  IN_PROGRESS
-  DONE
-  CANCELLED
 }
 
 model Guard {
