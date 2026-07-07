@@ -3,7 +3,6 @@ import { cors } from "@elysiajs/cors";
 import { authController } from "@/auth/auth.controller";
 import { memosController } from "@/modules/memos/memos.controller";
 import { guardsController } from "@/modules/guards/guards.controller";
-import { absencesController } from "@/modules/absences/absences.controller";
 import { resourcesController } from "@/modules/resources/resources.controller";
 import { epitechController } from "@/modules/epitech/epitech.controller";
 import { syncWhitelistFromEnv } from "@/auth/whitelist";
@@ -22,7 +21,6 @@ export const app = new Elysia()
     app
       .use(memosController)
       .use(guardsController)
-      .use(absencesController)
       .use(resourcesController)
       .use(epitechController)
   )

@@ -17,14 +17,14 @@ export const guardsController = new Elysia({ prefix: "/guards" })
     const parsed = GenerateGuardsSchema.safeParse(body);
     if (!parsed.success) return httpStatus(400, { error: parsed.error.flatten() });
     const result = await guardsService.generateYear(parsed.data.year);
-    return httpStatus(201, { created: result.count });
+    return httpStatus(201, { created: result.created });
   }, { body: t.Any() })
 
   .patch("/:id/assign", async ({ params, body }) => {
     const parsed = AssignGuardSchema.safeParse(body);
     if (!parsed.success) return httpStatus(400, { error: parsed.error.flatten() });
     try {
-      return await guardsService.assign(Number(params.id), parsed.data.aerId);
+      return await guardsService.assign(Number(params.id), parsed.data.guardAerId);
     } catch (err) {
       if (err instanceof Error && err.message === "PAST_GUARD")
         return httpStatus(422, { error: "Impossible de modifier une garde passée" });
@@ -32,4 +32,30 @@ export const guardsController = new Elysia({ prefix: "/guards" })
         return httpStatus(404, { error: "Garde introuvable" });
       throw err;
     }
-  }, { params: t.Object({ id: t.String() }), body: t.Any() });
+  }, { params: t.Object({ id: t.String() }), body: t.Any() })
+
+  .post("/:id/absent", async ({ params, session }) => {
+    try {
+      return await guardsService.declareAbsent(Number(params.id), Number(session.sub));
+    } catch (err) {
+      if (err instanceof Error && err.message === "NOT_FOUND")
+        return httpStatus(404, { error: "Garde introuvable" });
+      if (err instanceof Error && err.message === "PAST_GUARD")
+        return httpStatus(422, { error: "Impossible de déclarer une absence sur une garde passée" });
+      throw err;
+    }
+  }, { params: t.Object({ id: t.String() }) })
+
+  .delete("/:id/absent", async ({ params, session }) => {
+    try {
+      return await guardsService.cancelAbsent(Number(params.id), Number(session.sub));
+    } catch (err) {
+      if (err instanceof Error && err.message === "NOT_FOUND")
+        return httpStatus(404, { error: "Garde introuvable" });
+      if (err instanceof Error && err.message === "PAST_GUARD")
+        return httpStatus(422, { error: "Impossible de modifier une garde passée" });
+      if (err instanceof Error && err.message === "NOT_ABSENT")
+        return httpStatus(409, { error: "Tu n'es pas déclaré absent ce jour" });
+      throw err;
+    }
+  }, { params: t.Object({ id: t.String() }) });
