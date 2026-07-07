@@ -20,7 +20,8 @@ model User {
   updatedAt    DateTime @updatedAt
 
   guardsOnDuty    Guard[]  @relation("GuardDuty")
-  guardAbsences   Guard[]  @relation("GuardAbsences")
+  guardAbsences        Guard[]  @relation("GuardAbsences")
+  guardUnavailabilities Guard[]  @relation("GuardUnavailabilities")
   swapRequests    GuardSwapRequest[] @relation("requester")
   swapAcceptances GuardSwapRequest[] @relation("accepter")
   auditLogs       AuditLog[]
@@ -53,7 +54,9 @@ model Guard {
   guardAerId Int?
 
   // AERs absents ce jour (many-to-many implicite)
-  absentAers User[] @relation("GuardAbsences")
+  absentAers      User[] @relation("GuardAbsences")
+  // AERs indisponibles ce jour (raison différente d'une absence)
+  unavailableAers User[] @relation("GuardUnavailabilities")
 
   // Métadonnées calendaires (renseignées à la génération)
   isPublicHoliday   Boolean @default(false)
