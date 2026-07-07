@@ -19,7 +19,7 @@ export function useGenerateGuards() {
     mutationFn: (year: number) => guardsApi.generateYear(year),
     onSuccess: (data) => {
       qc.invalidateQueries({ queryKey: QUERY_KEY });
-      notifications.show({ message: `${data.created} gardes générées`, color: "green" });
+      notifications.show({ message: `${data.created} jours générés`, color: "green" });
     },
     onError: () => notifications.show({ message: "Erreur lors de la génération", color: "red" }),
   });
@@ -28,8 +28,8 @@ export function useGenerateGuards() {
 export function useAssignGuard() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: ({ id, aerId }: { id: number; aerId: number | null }) =>
-      guardsApi.assign(id, aerId),
+    mutationFn: ({ id, guardAerId }: { id: number; guardAerId: number | null }) =>
+      guardsApi.assign(id, guardAerId),
     onSuccess: () => qc.invalidateQueries({ queryKey: QUERY_KEY }),
     onError: (err: unknown) => {
       const msg =
@@ -38,5 +38,29 @@ export function useAssignGuard() {
           : "Erreur";
       notifications.show({ message: msg, color: "red" });
     },
+  });
+}
+
+export function useAddAbsent() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: number) => guardsApi.addAbsent(id),
+    onSuccess: () => qc.invalidateQueries({ queryKey: QUERY_KEY }),
+    onError: (err: unknown) => {
+      const msg =
+        err && typeof err === "object" && "error" in err
+          ? String((err as { error: string }).error)
+          : "Erreur";
+      notifications.show({ message: msg, color: "red" });
+    },
+  });
+}
+
+export function useRemoveAbsent() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: number) => guardsApi.removeAbsent(id),
+    onSuccess: () => qc.invalidateQueries({ queryKey: QUERY_KEY }),
+    onError: () => notifications.show({ message: "Erreur", color: "red" }),
   });
 }

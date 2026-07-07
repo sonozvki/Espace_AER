@@ -1,8 +1,18 @@
-import type { User } from "@/features/shared/types";
+export type GuardUser = {
+  id: number;
+  name: string;
+  email: string;
+  role: "ADMIN";
+};
 
 export type Guard = {
   id: number;
   date: string;
-  aer: User | null;
-  aerId: number | null;
+  guardAer: GuardUser | null;
+  guardAerId: number | null;
+  absentAers: GuardUser[];
+  isPublicHoliday: boolean;
+  publicHolidayName: string | null;
+  isSchoolHoliday: boolean;
+  schoolHolidayName: string | null;
 };
