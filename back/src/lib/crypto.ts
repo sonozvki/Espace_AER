@@ -1,7 +1,11 @@
-import { createCipheriv, createDecipheriv, randomBytes } from "crypto";
+import { createCipheriv, createDecipheriv, randomBytes, createHash } from "crypto";
 
 const ALGORITHM = "aes-256-gcm";
-const KEY = Buffer.from(process.env["ENCRYPTION_KEY"] ?? "", "hex");
+// Dérive une clé de 32 octets depuis ENCRYPTION_KEY, quel que soit son format
+// ou sa longueur (chaîne texte, hex, etc.). AES-256 exige exactement 32 octets.
+const KEY = createHash("sha256")
+  .update(process.env["ENCRYPTION_KEY"] ?? "")
+  .digest();
 
 export function encrypt(text: string): string {
   const iv = randomBytes(12);

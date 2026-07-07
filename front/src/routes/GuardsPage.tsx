@@ -2,9 +2,11 @@ import { useState, useMemo } from "react";
 import { Stack, Group, Title, Button, Text, ActionIcon, Loader, Center, Alert } from "@mantine/core";
 import { IconChevronLeft, IconChevronRight, IconAlertCircle } from "@tabler/icons-react";
 import { useGuards, useGenerateGuards } from "@/features/guards/hooks";
+import { useAbsences } from "@/features/absences/hooks";
 import { GuardCalendar } from "@/features/guards/components/GuardCalendar";
 import { useAuth } from "@/hooks/useAuth";
 import type { Guard } from "@/features/guards/types";
+import type { Absence } from "@/features/absences/types";
 
 const MONTHS = [
   "Janvier", "Février", "Mars", "Avril", "Mai", "Juin",
@@ -17,6 +19,7 @@ export function GuardsPage() {
   const [month, setMonth] = useState(today.getMonth());
 
   const { data: guards, isLoading } = useGuards();
+  const { data: absences } = useAbsences();
   const generateGuards = useGenerateGuards();
   const { user } = useAuth();
 
@@ -27,6 +30,15 @@ export function GuardsPage() {
     }
     return map;
   }, [guards]);
+
+  const absencesByDate = useMemo(() => {
+    const map = new Map<string, Absence[]>();
+    for (const a of absences ?? []) {
+      const key = a.date.substring(0, 10);
+      map.set(key, [...(map.get(key) ?? []), a]);
+    }
+    return map;
+  }, [absences]);
 
   const hasCurrentYear = (guards ?? []).some(
     (g) => new Date(g.date).getFullYear() === year
@@ -90,6 +102,7 @@ export function GuardsPage() {
           year={year}
           month={month}
           guardsByDate={guardsByDate}
+          absencesByDate={absencesByDate}
           currentUser={user}
         />
       )}

@@ -1,14 +1,17 @@
-import { AppShell, Burger, Group, NavLink, Text } from "@mantine/core";
+import { AppShell, Burger, Group, NavLink, Text, ActionIcon, useMantineColorScheme } from "@mantine/core";
 import { useDisclosure } from "@mantine/hooks";
+import { IconSun, IconMoon } from "@tabler/icons-react";
 import { Outlet, useNavigate, useLocation, Navigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { BASE_URL } from "@/lib/api";
 
 const NAV_ITEMS = [
+  { path: "/dashboard", label: "Tableau de bord" },
   { path: "/memos", label: "Mémos" },
   { path: "/guards", label: "Gardes" },
   { path: "/toolbox", label: "Toolbox" },
   { path: "/whitelist", label: "Whitelist" },
+  { path: "/settings", label: "Mon compte" },
 ];
 
 export function Layout() {
@@ -16,6 +19,7 @@ export function Layout() {
   const navigate = useNavigate();
   const location = useLocation();
   const { user, isLoading, isAuthenticated } = useAuth();
+  const { colorScheme, toggleColorScheme } = useMantineColorScheme();
 
   if (isLoading) return null;
   if (!isAuthenticated) return <Navigate to="/login" replace />;
@@ -31,7 +35,7 @@ export function Layout() {
       navbar={{ width: 220, breakpoint: "sm", collapsed: { mobile: !opened } }}
       padding="md"
     >
-      <AppShell.Header bg="dark.6" style={{ borderBottom: "1px solid var(--epi-border)" }}>
+      <AppShell.Header bg="var(--epi-panel)" style={{ borderBottom: "1px solid var(--epi-border)" }}>
         <Group h="100%" px="md" justify="space-between">
           <Group>
             <Burger opened={opened} onClick={toggle} hiddenFrom="sm" size="sm" />
@@ -39,13 +43,23 @@ export function Layout() {
               Espace AER
             </Text>
           </Group>
-          <Text size="sm" c="dimmed">
-            {user?.name}
-          </Text>
+          <Group gap="sm">
+            <ActionIcon
+              variant="subtle"
+              color="gray"
+              onClick={toggleColorScheme}
+              aria-label="Basculer entre mode clair et sombre"
+            >
+              {colorScheme === "dark" ? <IconSun size={18} /> : <IconMoon size={18} />}
+            </ActionIcon>
+            <Text size="sm" c="dimmed">
+              {user?.name}
+            </Text>
+          </Group>
         </Group>
       </AppShell.Header>
 
-      <AppShell.Navbar p="xs" bg="dark.6" style={{ borderRight: "1px solid var(--epi-border)" }}>
+      <AppShell.Navbar p="xs" bg="var(--epi-panel)" style={{ borderRight: "1px solid var(--epi-border)" }}>
         {NAV_ITEMS.map((item) => (
           <NavLink
             key={item.path}
@@ -64,7 +78,7 @@ export function Layout() {
         />
       </AppShell.Navbar>
 
-      <AppShell.Main bg="dark.7">
+      <AppShell.Main bg="var(--epi-bg)" className="epi-dotted">
         <Outlet />
       </AppShell.Main>
     </AppShell>

@@ -3,7 +3,7 @@ import { BASE_URL } from "@/lib/api";
 
 export function LoginPage() {
   return (
-    <Center h="100vh" bg="dark.7">
+    <Center h="100vh" bg="var(--epi-bg)">
       <Stack align="center" gap="md">
         <Text ff="Anton, sans-serif" size="xl" c="epitech.4">
           Espace AER

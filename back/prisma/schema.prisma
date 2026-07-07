@@ -11,18 +11,30 @@ enum Role {
 }
 
 model User {
-  id        Int      @id @default(autoincrement())
-  email     String   @unique
-  name      String
-  role      Role     @default(ADMIN)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id           Int      @id @default(autoincrement())
+  email        String   @unique
+  name         String
+  role         Role     @default(ADMIN)
+  epitechToken String?  // Cookie "user" de intra.epitech.eu, chiffré (AES-256-GCM)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
 
   guards          Guard[]
-  actionItems     ActionItem[]
   swapRequests    GuardSwapRequest[] @relation("requester")
   swapAcceptances GuardSwapRequest[] @relation("accepter")
   auditLogs       AuditLog[]
+  absences        Absence[]
+}
+
+// Absence déclarée par un AER sur une journée (indépendante des gardes)
+model Absence {
+  id        Int      @id @default(autoincrement())
+  date      DateTime @db.Date
+  createdAt DateTime @default(now())
+  user   User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId Int
+  @@unique([date, userId])
+  @@index([date])
 }
 
 model Whitelist {
@@ -39,30 +51,7 @@ model Memo {
   content   String   @default("")
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-  actionItems ActionItem[]
   @@index([createdAt(sort: Desc)])
-}
-
-model ActionItem {
-  id         Int          @id @default(autoincrement())
-  content    String
-  status     ActionStatus @default(PENDING)
-  deadline   DateTime?
-  createdAt  DateTime     @default(now())
-  updatedAt  DateTime     @updatedAt
-  memo       Memo  @relation(fields: [memoId], references: [id], onDelete: Cascade)
-  memoId     Int
-  assignee   User? @relation(fields: [assigneeId], references: [id])
-  assigneeId Int?
-  @@index([status])
-  @@index([assigneeId])
-}
-
-enum ActionStatus {
-  PENDING
-  IN_PROGRESS
-  DONE
-  CANCELLED
 }
 
 model Guard {

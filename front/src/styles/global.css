@@ -57,19 +57,50 @@ body {
 }
 
 /* ─── Design tokens ─────────────────────────────────────────────────────────
-   Semantic aliases sur les variables Mantine (dark scale définie dans theme.ts).
-   Changer dark[] dans theme.ts rethème toute l'app.
+   Semantic aliases sur les variables Mantine, déclinés par color scheme.
+   Les composants n'utilisent QUE ces tokens (jamais dark.X en dur) pour que
+   le toggle light/dark fonctionne partout.
    ─────────────────────────────────────────────────────────────────────────── */
 [data-mantine-color-scheme="dark"] {
-  --epi-bg:      var(--mantine-color-dark-7);   /* #1f1f1f — fond principal    */
-  --epi-panel:   var(--mantine-color-dark-6);   /* #242424 — header/sidebar    */
-  --epi-surface: var(--mantine-color-dark-5);   /* #2a2a2a — cards, inputs     */
-  --epi-border:  var(--mantine-color-dark-4);   /* #3a3a3a — bordures          */
-  --epi-muted:   var(--mantine-color-dark-3);   /* #aaaaaa — texte atténué     */
-  --epi-ghost:   var(--mantine-color-dark-2);   /* #777777 — très atténué      */
+  --epi-bg:       var(--mantine-color-dark-7);   /* #1f1f1f — fond principal    */
+  --epi-panel:    var(--mantine-color-dark-6);   /* #242424 — header/sidebar    */
+  --epi-surface:  var(--mantine-color-dark-5);   /* #2a2a2a — cards, inputs     */
+  --epi-border:   var(--mantine-color-dark-4);   /* #3a3a3a — bordures          */
+  --epi-muted:    var(--mantine-color-dark-3);   /* #aaaaaa — texte atténué     */
+  --epi-ghost:    var(--mantine-color-dark-2);   /* #777777 — très atténué      */
+  --epi-today-bg: var(--mantine-color-epitech-9);
+  --epi-hero:     linear-gradient(135deg, var(--mantine-color-epitech-9) 0%, var(--mantine-color-dark-6) 100%);
+  --epi-chip-bg:  rgba(255, 255, 255, 0.05);
+  --epi-chip-border: rgba(255, 255, 255, 0.08);
+}
+
+[data-mantine-color-scheme="light"] {
+  --epi-bg:       var(--mantine-color-gray-0);   /* fond principal              */
+  --epi-panel:    #ffffff;                       /* header/sidebar              */
+  --epi-surface:  var(--mantine-color-gray-1);   /* cards, inputs               */
+  --epi-border:   var(--mantine-color-gray-3);   /* bordures                    */
+  --epi-muted:    var(--mantine-color-gray-6);   /* texte atténué               */
+  --epi-ghost:    var(--mantine-color-gray-5);   /* très atténué                */
+  --epi-today-bg: var(--mantine-color-epitech-0);
+  --epi-hero:     linear-gradient(135deg, var(--mantine-color-epitech-1) 0%, #ffffff 100%);
+  --epi-chip-bg:  rgba(0, 0, 0, 0.04);
+  --epi-chip-border: rgba(0, 0, 0, 0.08);
 }
 
 :root {
   --epi-accent:      #809dfd;
   --epi-accent-dark: #6b8afc;
+  --epi-blue:        #013afb;   /* bleu Epitech (hero, accents forts) */
+}
+
+/* Fond quadrillé de points (style my.epitech) */
+[data-mantine-color-scheme="dark"] {
+  --epi-dot: rgba(255, 255, 255, 0.06);
+}
+[data-mantine-color-scheme="light"] {
+  --epi-dot: rgba(0, 0, 0, 0.12);
+}
+.epi-dotted {
+  background-image: radial-gradient(var(--epi-dot) 1px, transparent 1px);
+  background-size: 22px 22px;
 }

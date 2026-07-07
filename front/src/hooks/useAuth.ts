@@ -6,6 +6,7 @@ export type AuthUser = {
   email: string;
   name: string;
   role: "AER" | "ADMIN";
+  hasEpitechToken: boolean;
 };
 
 export function useAuth() {

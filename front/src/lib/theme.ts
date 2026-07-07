@@ -1,6 +1,7 @@
-import { createTheme, type MantineColorsTuple } from "@mantine/core";
+import { createTheme, virtualColor, type MantineColorsTuple } from "@mantine/core";
 
-const epitechAccent: MantineColorsTuple = [
+// Dark mode : pervenche doux, lisible sur fond sombre
+const epitechAccentDark: MantineColorsTuple = [
   "#eef0ff",
   "#dde1ff",
   "#bbc3ff",
@@ -11,6 +12,20 @@ const epitechAccent: MantineColorsTuple = [
   "#4264e0",
   "#3255c5",
   "#2246aa",
+];
+
+// Light mode : bleu Epitech #013afb (shade 4 = primaryShade)
+const epitechAccentLight: MantineColorsTuple = [
+  "#e6ecff",
+  "#c0cfff",
+  "#94adff",
+  "#4a72ff",
+  "#013afb",
+  "#0134e2",
+  "#012ec9",
+  "#0227ab",
+  "#02218e",
+  "#011a70",
 ];
 
 const epitechDark: MantineColorsTuple = [
@@ -31,7 +46,9 @@ export const theme = createTheme({
   primaryShade: { dark: 4, light: 4 },
 
   colors: {
-    epitech: epitechAccent,
+    epitechDim: epitechAccentDark,
+    epitechVivid: epitechAccentLight,
+    epitech: virtualColor({ name: "epitech", dark: "epitechDim", light: "epitechVivid" }),
     dark: epitechDark,
   },
 
@@ -47,7 +64,7 @@ export const theme = createTheme({
       },
     },
     Paper: {
-      defaultProps: { bg: "dark.6" },
+      defaultProps: { bg: "var(--epi-panel)" },
     },
   },
 });
