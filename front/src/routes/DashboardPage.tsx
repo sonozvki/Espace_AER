@@ -87,29 +87,31 @@ function GuardCard({ guard }: { guard: Guard }) {
   );
 }
 
-function AbsenceRow({ date, user }: { date: string; user: GuardUser }) {
+function AbsenceRow({ date, user, reason }: { date: string; user: GuardUser; reason: "absent" | "unavailable" }) {
   const d = new Date(date);
   const today = new Date();
   today.setHours(0, 0, 0, 0);
   const isToday = d.getTime() === today.getTime();
+  const color = reason === "unavailable" ? "violet" : "red";
+  const label = reason === "unavailable" ? "indisponible" : "absent";
 
   return (
     <Paper
       p="sm"
       withBorder
       style={{
-        borderColor: isToday ? "var(--mantine-color-red-5)" : "var(--epi-border)",
+        borderColor: isToday ? `var(--mantine-color-${color}-5)` : "var(--epi-border)",
         borderLeftWidth: isToday ? 3 : 1,
       }}
     >
       <Group gap="sm">
-        <ThemeIcon size="md" variant="light" color="red">
+        <ThemeIcon size="md" variant="light" color={color}>
           <IconUserOff size={14} />
         </ThemeIcon>
         <Text size="sm" fw={isToday ? 700 : 500}>
-          {user.name.split(" ")[0]} absent : {formatDate(date)}
+          {user.name.split(" ")[0]} {label} : {formatDate(date)}
           {isToday && (
-            <Badge size="xs" color="red" variant="filled" ml="xs">
+            <Badge size="xs" color={color} variant="filled" ml="xs">
               Aujourd'hui
             </Badge>
           )}
@@ -123,14 +125,15 @@ export function DashboardPage() {
   const { user } = useAuth();
   const { data: guards, isLoading: guardsLoading } = useGuards();
 
-  const upcomingAbsences = useMemo<Array<{ date: string; user: GuardUser }>>(() => {
+  const upcomingAbsences = useMemo<Array<{ date: string; user: GuardUser; reason: "absent" | "unavailable" }>>(() => {
     if (!guards) return [];
     const today = new Date();
     today.setHours(0, 0, 0, 0);
-    const result: Array<{ date: string; user: GuardUser }> = [];
+    const result: Array<{ date: string; user: GuardUser; reason: "absent" | "unavailable" }> = [];
     for (const g of guards) {
       if (new Date(g.date) < today) continue;
-      for (const u of g.absentAers) result.push({ date: g.date, user: u });
+      for (const u of g.absentAers) result.push({ date: g.date, user: u, reason: "absent" });
+      for (const u of g.unavailableAers) result.push({ date: g.date, user: u, reason: "unavailable" });
     }
     return result
       .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
@@ -307,7 +310,7 @@ export function DashboardPage() {
           ) : (
             <Stack gap="xs">
               {upcomingAbsences.map((a, i) => (
-                <AbsenceRow key={`${a.user.id}-${a.date}-${i}`} date={a.date} user={a.user} />
+                <AbsenceRow key={`${a.user.id}-${a.date}-${a.reason}-${i}`} date={a.date} user={a.user} reason={a.reason} />
               ))}
             </Stack>
           )}

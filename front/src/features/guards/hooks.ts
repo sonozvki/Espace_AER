@@ -64,3 +64,27 @@ export function useRemoveAbsent() {
     onError: () => notifications.show({ message: "Erreur", color: "red" }),
   });
 }
+
+export function useAddUnavailable() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: number) => guardsApi.addUnavailable(id),
+    onSuccess: () => qc.invalidateQueries({ queryKey: QUERY_KEY }),
+    onError: (err: unknown) => {
+      const msg =
+        err && typeof err === "object" && "error" in err
+          ? String((err as { error: string }).error)
+          : "Erreur";
+      notifications.show({ message: msg, color: "red" });
+    },
+  });
+}
+
+export function useRemoveUnavailable() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: number) => guardsApi.removeUnavailable(id),
+    onSuccess: () => qc.invalidateQueries({ queryKey: QUERY_KEY }),
+    onError: () => notifications.show({ message: "Erreur", color: "red" }),
+  });
+}

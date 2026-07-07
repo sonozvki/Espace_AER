@@ -11,6 +11,7 @@ export type Guard = {
   guardAer: GuardUser | null;
   guardAerId: number | null;
   absentAers: GuardUser[];
+  unavailableAers: GuardUser[];
   isPublicHoliday: boolean;
   publicHolidayName: string | null;
   isSchoolHoliday: boolean;

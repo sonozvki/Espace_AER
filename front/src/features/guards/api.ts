@@ -21,4 +21,10 @@ export const guardsApi = {
 
   removeAbsent: (id: number) =>
     apiFetch<Guard>(`/api/guards/${id}/absent`, { method: "DELETE" }),
+
+  addUnavailable: (id: number) =>
+    apiFetch<Guard>(`/api/guards/${id}/unavailable`, { method: "POST" }),
+
+  removeUnavailable: (id: number) =>
+    apiFetch<Guard>(`/api/guards/${id}/unavailable`, { method: "DELETE" }),
 };
