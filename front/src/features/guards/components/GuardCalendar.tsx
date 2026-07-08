@@ -1,4 +1,4 @@
-import { Box, Text, Button, Stack, Tooltip, Badge, Group } from "@mantine/core";
+import { Box, Text, Button, Stack, Tooltip, Badge, Group, SimpleGrid } from "@mantine/core";
 import type { Guard } from "../types";
 import type { User } from "@/features/shared/types";
 import type { Absence } from "@/features/absences/types";
@@ -210,31 +210,25 @@ export function GuardCalendar({ year, month, guardsByDate, absencesByDate, curre
   return (
     <Box>
       {/* Header */}
-      <Box
-        style={{
-          display: "grid",
-          gridTemplateColumns: "repeat(6, 1fr)",
-          gap: 8,
-          marginBottom: 8,
-        }}
+      <SimpleGrid
+        cols={{ base: 2, sm: 6 }}
+        spacing={8}
+        mb={8}
       >
         {DAY_HEADERS.map((h) => (
           <Text key={h} size="sm" fw={600} c="dimmed" ta="center" py={4}>
             {h}
           </Text>
         ))}
-      </Box>
+      </SimpleGrid>
 
       {/* Weeks */}
       <Stack gap={8}>
         {weeks.map((week, wi) => (
-          <Box
+          <SimpleGrid
             key={wi}
-            style={{
-              display: "grid",
-              gridTemplateColumns: "repeat(6, 1fr)",
-              gap: 8,
-            }}
+            cols={{ base: 2, sm: 6 }}
+            spacing={8}
           >
             {week.map((day, di) =>
               day ? (
@@ -249,7 +243,7 @@ export function GuardCalendar({ year, month, guardsByDate, absencesByDate, curre
                 <Box key={`empty-${wi}-${di}`} style={{ minHeight: 120 }} />
               )
             )}
-          </Box>
+          </SimpleGrid>
         ))}
       </Stack>
     </Box>
