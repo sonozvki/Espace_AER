@@ -1,4 +1,4 @@
-export type Role = "AER" | "ADMIN";
+export type Role = "ADMIN";
 
 export type User = {
   id: number;

@@ -140,7 +140,7 @@ function DayCell({ day, guard, currentUser }: DayCellProps) {
         <Stack gap={4} style={{ flex: 1 }}>
           {guard.guardAer ? (
             <Tooltip label={guard.guardAer.email} withArrow>
-              <Badge size="md" color={isMyGuard ? "epitech" : "gray"} variant="filled" maw="100%">
+              <Badge size="md" color={isMyGuard ? "epitechVivid" : "blue"} variant="filled" maw="100%">
                 {guard.guardAer.name.split(" ")[0]}
               </Badge>
             </Tooltip>
@@ -254,7 +254,6 @@ export function GuardCalendar({
   year,
   month,
   guardsByDate,
-  absencesByDate,
   currentUser,
   weekIndex,
   onWeekChange,
@@ -277,7 +276,6 @@ export function GuardCalendar({
                 <DayCell
                   day={day}
                   guard={guardsByDate.get(toDateKey(day)) ?? null}
-                  absences={absencesByDate.get(toDateKey(day)) ?? []}
                   currentUser={currentUser}
                 />
               </Box>

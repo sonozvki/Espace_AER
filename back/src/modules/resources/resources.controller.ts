@@ -1,4 +1,5 @@
 import { Elysia, t } from "elysia";
+import { z } from "zod";
 import { resourcesService } from "./resources.service";
 import { CreateResourceSchema, UploadResourceSchema, MAX_FILE_SIZE, PDF_MIME } from "./resources.schemas";
 import { verifySession, COOKIE } from "@/auth/session";
@@ -19,7 +20,7 @@ export const resourcesController = new Elysia({ prefix: "/resources" })
     "/",
     async ({ body }) => {
       const parsed = CreateResourceSchema.safeParse(body);
-      if (!parsed.success) return httpStatus(400, { error: parsed.error.flatten() });
+      if (!parsed.success) return httpStatus(400, { error: z.flattenError(parsed.error) });
       return httpStatus(201, await resourcesService.createResource(parsed.data));
     },
     { body: t.Any() }
@@ -29,7 +30,7 @@ export const resourcesController = new Elysia({ prefix: "/resources" })
     async ({ body }) => {
       const { file, ...fields } = body;
       const parsed = UploadResourceSchema.safeParse(fields);
-      if (!parsed.success) return httpStatus(400, { error: parsed.error.flatten() });
+      if (!parsed.success) return httpStatus(400, { error: z.flattenError(parsed.error) });
       if (file.type !== PDF_MIME || !file.name.toLowerCase().endsWith(".pdf"))
         return httpStatus(400, { error: "Seuls les fichiers PDF sont acceptés" });
       if (file.size > MAX_FILE_SIZE)

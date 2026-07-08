@@ -45,8 +45,8 @@ services:
       PORT: 8081
       JWT_SECRET: dev_jwt_secret_change_in_prod
       ENCRYPTION_KEY: dev_encryption_key_32_chars_min_!!
-      FRONTEND_URL: http://localhost:5173
-      MICROSOFT_REDIRECT_URI: http://localhost:8081/auth/callback
+      FRONTEND_URL: ${FRONTEND_URL:-http://localhost:5173}
+      MICROSOFT_REDIRECT_URI: ${MICROSOFT_REDIRECT_URI:-http://localhost:8081/auth/callback}
       # WHITELIST_ADMINS et WHITELIST_AERS chargés depuis back/.env via env_file
     volumes:
       - ./back/src:/app/src
@@ -66,6 +66,8 @@ services:
     container_name: aer-frontend
     ports:
       - "5173:5173"
+    environment:
+      - VITE_API_URL=${VITE_API_URL:-http://localhost:8081}
     volumes:
       - ./front/src:/app/src
     depends_on:

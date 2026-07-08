@@ -19,12 +19,13 @@ export async function verifySession(token: string) {
 }
 
 export function sessionCookieOptions(token: string) {
+  const isProd = process.env["NODE_ENV"] === "production";
   return {
     name: COOKIE,
     value: token,
     httpOnly: true,
-    secure: process.env["NODE_ENV"] === "production",
-    sameSite: "lax" as const,
+    secure: isProd,
+    sameSite: (isProd ? "strict" : "lax") as "strict" | "lax",
     maxAge: TTL,
     path: "/",
   };

@@ -1,8 +1,15 @@
 import { Elysia, t } from "elysia";
+import { z } from "zod";
 import { guardsService } from "./guards.service";
 import { GenerateGuardsSchema, AssignGuardSchema } from "./guards.schemas";
 import { verifySession, COOKIE } from "@/auth/session";
 import { httpStatus } from "@/lib/http";
+
+function sessionUserId(sub: string): number {
+  const id = Number(sub);
+  if (!Number.isInteger(id) || id <= 0) throw httpStatus(401, { error: "Session invalide" });
+  return id;
+}
 
 export const guardsController = new Elysia({ prefix: "/guards" })
   .derive(async ({ cookie }) => {
@@ -15,14 +22,14 @@ export const guardsController = new Elysia({ prefix: "/guards" })
 
   .post("/generate", async ({ body }) => {
     const parsed = GenerateGuardsSchema.safeParse(body);
-    if (!parsed.success) return httpStatus(400, { error: parsed.error.flatten() });
+    if (!parsed.success) return httpStatus(400, { error: z.flattenError(parsed.error) });
     const result = await guardsService.generateYear(parsed.data.year);
     return httpStatus(201, { created: result.created });
   }, { body: t.Any() })
 
   .patch("/:id/assign", async ({ params, body }) => {
     const parsed = AssignGuardSchema.safeParse(body);
-    if (!parsed.success) return httpStatus(400, { error: parsed.error.flatten() });
+    if (!parsed.success) return httpStatus(400, { error: z.flattenError(parsed.error) });
     try {
       return await guardsService.assign(Number(params.id), parsed.data.guardAerId);
     } catch (err) {
@@ -36,7 +43,7 @@ export const guardsController = new Elysia({ prefix: "/guards" })
 
   .post("/:id/absent", async ({ params, session }) => {
     try {
-      return await guardsService.declareAbsent(Number(params.id), Number(session.sub));
+      return await guardsService.declareAbsent(Number(params.id), sessionUserId(session.sub));
     } catch (err) {
       if (err instanceof Error && err.message === "NOT_FOUND")
         return httpStatus(404, { error: "Garde introuvable" });
@@ -48,7 +55,7 @@ export const guardsController = new Elysia({ prefix: "/guards" })
 
   .post("/:id/unavailable", async ({ params, session }) => {
     try {
-      return await guardsService.declareUnavailable(Number(params.id), Number(session.sub));
+      return await guardsService.declareUnavailable(Number(params.id), sessionUserId(session.sub));
     } catch (err) {
       if (err instanceof Error && err.message === "NOT_FOUND")
         return httpStatus(404, { error: "Garde introuvable" });
@@ -60,7 +67,7 @@ export const guardsController = new Elysia({ prefix: "/guards" })
 
   .delete("/:id/unavailable", async ({ params, session }) => {
     try {
-      return await guardsService.cancelUnavailable(Number(params.id), Number(session.sub));
+      return await guardsService.cancelUnavailable(Number(params.id), sessionUserId(session.sub));
     } catch (err) {
       if (err instanceof Error && err.message === "NOT_FOUND")
         return httpStatus(404, { error: "Garde introuvable" });
@@ -74,7 +81,7 @@ export const guardsController = new Elysia({ prefix: "/guards" })
 
   .delete("/:id/absent", async ({ params, session }) => {
     try {
-      return await guardsService.cancelAbsent(Number(params.id), Number(session.sub));
+      return await guardsService.cancelAbsent(Number(params.id), sessionUserId(session.sub));
     } catch (err) {
       if (err instanceof Error && err.message === "NOT_FOUND")
         return httpStatus(404, { error: "Garde introuvable" });

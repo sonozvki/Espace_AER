@@ -5,7 +5,7 @@ export type AuthUser = {
   id: number;
   email: string;
   name: string;
-  role: "AER" | "ADMIN";
+  role: "ADMIN";
   hasEpitechToken: boolean;
 };
 

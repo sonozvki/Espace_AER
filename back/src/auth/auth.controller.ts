@@ -1,4 +1,4 @@
-import { Elysia, t } from "elysia";
+import { Elysia, t, redirect } from "elysia";
 import { getAuthorizationUrl, handleCallback } from "@/auth/auth.service";
 import { createSession, verifySession, sessionCookieOptions, COOKIE } from "@/auth/session";
 import { prisma } from "@/db/prisma";
@@ -8,7 +8,7 @@ import { encrypt } from "@/lib/crypto";
 import { z } from "zod";
 
 const WhitelistBodySchema = z.object({
-  email: z.string().email(),
+  email: z.email(),
 });
 
 const EpitechTokenBodySchema = z.object({
@@ -24,7 +24,7 @@ async function getSession(cookie: Record<string, { value?: unknown }>) {
 }
 
 export const authController = new Elysia({ prefix: "/auth" })
-  .get("/login", async ({ cookie, redirect }) => {
+  .get("/login", async ({ cookie }) => {
     // Dev mode: no Microsoft credentials → auto-login as ADMIN
     if (!process.env["MICROSOFT_CLIENT_ID"]) {
       const devUser = await prisma.user.upsert({
@@ -37,17 +37,17 @@ export const authController = new Elysia({ prefix: "/auth" })
       return redirect(FRONTEND);
     }
     const { url, state, codeVerifier } = getAuthorizationUrl();
-    cookie["oauth_state"]!.set({ value: state, httpOnly: true, sameSite: "lax" as const, maxAge: 600, path: "/" });
-    cookie["oauth_verifier"]!.set({ value: codeVerifier, httpOnly: true, sameSite: "lax" as const, maxAge: 600, path: "/" });
+    const isProd = process.env["NODE_ENV"] === "production";
+    cookie["oauth_state"]!.set({ value: state, httpOnly: true, secure: isProd, sameSite: "lax" as const, maxAge: 600, path: "/" });
+    cookie["oauth_verifier"]!.set({ value: codeVerifier, httpOnly: true, secure: isProd, sameSite: "lax" as const, maxAge: 600, path: "/" });
     return redirect(url.toString());
   })
 
   .get(
     "/callback",
-    async ({ query, cookie, set, redirect }) => {
+    async ({ query, cookie }) => {
       if (query.error) {
-        set.redirect = `${FRONTEND}/login?error=${encodeURIComponent(query.error)}`;
-        return;
+        return redirect(`${FRONTEND}/login?error=${encodeURIComponent(String(query.error))}`);
       }
       const storedState = cookie["oauth_state"]?.value as string | undefined;
       const codeVerifier = cookie["oauth_verifier"]?.value as string | undefined;
@@ -120,6 +120,7 @@ export const authController = new Elysia({ prefix: "/auth" })
   .get("/users", async ({ cookie }) => {
     const session = await getSession(cookie);
     if (!session) return httpStatus(401, { error: "Non authentifié" });
+    if (session.role !== "ADMIN") return httpStatus(403, { error: "Accès refusé" });
     return prisma.user.findMany({
       select: { id: true, name: true, email: true, role: true },
       orderBy: { name: "asc" },
@@ -129,6 +130,7 @@ export const authController = new Elysia({ prefix: "/auth" })
   .get("/whitelist", async ({ cookie }) => {
     const session = await getSession(cookie);
     if (!session) return httpStatus(401, { error: "Non authentifié" });
+    if (session.role !== "ADMIN") return httpStatus(403, { error: "Accès refusé" });
     return prisma.whitelist.findMany({ orderBy: { createdAt: "asc" } });
   })
 
@@ -137,8 +139,9 @@ export const authController = new Elysia({ prefix: "/auth" })
     async ({ cookie, body }) => {
       const session = await getSession(cookie);
       if (!session) return httpStatus(401, { error: "Non authentifié" });
+      if (session.role !== "ADMIN") return httpStatus(403, { error: "Accès refusé" });
       const parsed = WhitelistBodySchema.safeParse(body);
-      if (!parsed.success) return httpStatus(400, { error: parsed.error.flatten() });
+      if (!parsed.success) return httpStatus(400, { error: z.flattenError(parsed.error) });
       return addToWhitelist(parsed.data.email);
     },
     { body: t.Any() }
@@ -149,7 +152,11 @@ export const authController = new Elysia({ prefix: "/auth" })
     async ({ cookie, params }) => {
       const session = await getSession(cookie);
       if (!session) return httpStatus(401, { error: "Non authentifié" });
-      return removeFromWhitelist(decodeURIComponent(params.email));
+      if (session.role !== "ADMIN") return httpStatus(403, { error: "Accès refusé" });
+      const email = decodeURIComponent(params.email);
+      const parsed = WhitelistBodySchema.safeParse({ email });
+      if (!parsed.success) return httpStatus(400, { error: "Email invalide" });
+      return removeFromWhitelist(parsed.data.email);
     },
     { params: t.Object({ email: t.String() }) }
   )
