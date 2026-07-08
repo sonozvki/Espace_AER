@@ -12,7 +12,7 @@ const MONTHS = [
 ];
 
 export function GuardsPage() {
-  const today = new Date();
+  const today = useMemo(() => new Date(), []);
   const [year, setYear] = useState(today.getFullYear());
   const [month, setMonth] = useState(today.getMonth());
 
