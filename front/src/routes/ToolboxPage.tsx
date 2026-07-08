@@ -1,4 +1,5 @@
-import { Stack, Group, Title, Button, Text, Loader, Center, SimpleGrid } from "@mantine/core";
+import { useState } from "react";
+import { Stack, Group, Title, Button, Text, Loader, Center, SimpleGrid, Modal } from "@mantine/core";
 import { useDisclosure } from "@mantine/hooks";
 import { IconPlus } from "@tabler/icons-react";
 import { useResources, useDeleteResource } from "@/features/toolbox/hooks";
@@ -16,9 +17,15 @@ function groupByCategory(resources: Resource[]): Record<string, Resource[]> {
 export function ToolboxPage() {
   const { data: resources, isLoading } = useResources();
   const deleteResource = useDeleteResource();
-  const [opened, { open, close }] = useDisclosure(false);
+  const [formOpened, { open, close }] = useDisclosure(false);
+  const [toDelete, setToDelete] = useState<Resource | null>(null);
 
   const groups = groupByCategory(resources ?? []);
+
+  function confirmDelete() {
+    if (!toDelete) return;
+    deleteResource.mutate(toDelete.id, { onSettled: () => setToDelete(null) });
+  }
 
   return (
     <Stack gap="lg">
@@ -53,14 +60,34 @@ export function ToolboxPage() {
               <ResourceCard
                 key={r.id}
                 resource={r}
-                onDelete={() => deleteResource.mutate(r.id)}
+                onDelete={() => setToDelete(r)}
               />
             ))}
           </SimpleGrid>
         </Stack>
       ))}
 
-      <ResourceFormModal opened={opened} onClose={close} />
+      <ResourceFormModal opened={formOpened} onClose={close} />
+
+      <Modal
+        opened={!!toDelete}
+        onClose={() => setToDelete(null)}
+        title="Supprimer la ressource"
+        centered
+        size="sm"
+      >
+        <Text size="sm" mb="xl">
+          Supprimer <strong>{toDelete?.title}</strong> ? Cette action est irréversible.
+        </Text>
+        <Group justify="flex-end" gap="sm">
+          <Button variant="default" onClick={() => setToDelete(null)}>
+            Annuler
+          </Button>
+          <Button color="red" loading={deleteResource.isPending} onClick={confirmDelete}>
+            Supprimer
+          </Button>
+        </Group>
+      </Modal>
     </Stack>
   );
 }

@@ -3,11 +3,9 @@ import { Stack, Group, Title, Button, Text, ActionIcon, Loader, Center, Alert } 
 import { useMediaQuery } from "@mantine/hooks";
 import { IconChevronLeft, IconChevronRight, IconAlertCircle } from "@tabler/icons-react";
 import { useGuards, useGenerateGuards } from "@/features/guards/hooks";
-import { useAbsences } from "@/features/absences/hooks";
 import { GuardCalendar } from "@/features/guards/components/GuardCalendar";
 import { useAuth } from "@/hooks/useAuth";
 import type { Guard } from "@/features/guards/types";
-import type { Absence } from "@/features/absences/types";
 
 const MONTHS = [
   "Janvier", "Février", "Mars", "Avril", "Mai", "Juin",
@@ -15,14 +13,13 @@ const MONTHS = [
 ];
 
 export function GuardsPage() {
-  const today = new Date();
+  const today = useMemo(() => new Date(), []);
   const [year, setYear] = useState(today.getFullYear());
   const [month, setMonth] = useState(today.getMonth());
   const [weekIndex, setWeekIndex] = useState(0);
   const isMobile = !useMediaQuery("(min-width: 768px)");
 
   const { data: guards, isLoading } = useGuards();
-  const { data: absences } = useAbsences();
   const generateGuards = useGenerateGuards();
   const { user } = useAuth();
 
@@ -33,15 +30,6 @@ export function GuardsPage() {
     }
     return map;
   }, [guards]);
-
-  const absencesByDate = useMemo(() => {
-    const map = new Map<string, Absence[]>();
-    for (const a of absences ?? []) {
-      const key = a.date.substring(0, 10);
-      map.set(key, [...(map.get(key) ?? []), a]);
-    }
-    return map;
-  }, [absences]);
 
   const hasCurrentYear = (guards ?? []).some(
     (g) => new Date(g.date).getFullYear() === year
@@ -125,7 +113,7 @@ export function GuardsPage() {
 
       {!isLoading && !hasCurrentYear && (
         <Alert icon={<IconAlertCircle size={16} />} color="orange" variant="light">
-          Aucune garde générée pour {year}.{" "}
+          Aucun planning généré pour {year}.{" "}
           {user?.role === "ADMIN"
             ? "Cliquez sur « Générer » pour créer le planning de l'année."
             : "Demandez à un admin de générer le planning."}
@@ -173,7 +161,6 @@ export function GuardsPage() {
           year={year}
           month={month}
           guardsByDate={guardsByDate}
-          absencesByDate={absencesByDate}
           currentUser={user}
           isMobile={isMobile}
           weekIndex={isMobile ? weekIndex : undefined}
