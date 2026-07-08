@@ -69,12 +69,16 @@ export function ToolboxPage() {
         </Stack>
       ))}
 
-      <ResourceFormModal opened={formOpened} onClose={close} />
-
-      {/* Édition — instance montée à la demande pour préremplir le formulaire */}
-      {toEdit && (
-        <ResourceFormModal opened resource={toEdit} onClose={() => setToEdit(null)} />
-      )}
+      {/* Création et édition : une seule instance toujours montée (même pattern
+          que le modal de suppression), préremplie via la prop resource */}
+      <ResourceFormModal
+        opened={formOpened || !!toEdit}
+        resource={toEdit ?? undefined}
+        onClose={() => {
+          close();
+          setToEdit(null);
+        }}
+      />
 
       <Modal
         opened={!!toDelete}

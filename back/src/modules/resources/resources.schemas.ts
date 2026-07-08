@@ -17,7 +17,7 @@ export const UploadResourceSchema = z.object({
 
 export type UploadResourceInput = z.infer<typeof UploadResourceSchema>;
 
-// Mise à jour des métadonnées uniquement (le fichier PDF n'est pas remplaçable)
+// Mise à jour des métadonnées ; le fichier se remplace via PATCH /:id/file
 export const UpdateResourceSchema = z.object({
   title: z.string().min(1).max(200).optional(),
   url: z.string().url().optional(),

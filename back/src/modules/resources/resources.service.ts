@@ -23,6 +23,18 @@ export const resourcesService = {
   updateResource(id: number, data: UpdateResourceInput) {
     return resourcesRepository.update(id, data);
   },
+  // Remplace le PDF d'une ressource fichier ; null si la ressource n'existe pas ou est un lien
+  async replaceResourceFile(id: number, file: File) {
+    const existing = await resourcesRepository.findMeta(id);
+    if (!existing?.fileName) return null;
+    const fileData = new Uint8Array(await file.arrayBuffer());
+    return resourcesRepository.updateFile(id, {
+      fileName: file.name,
+      fileMime: file.type || "application/pdf",
+      fileSize: fileData.byteLength,
+      fileData,
+    });
+  },
   deleteResource(id: number) {
     return resourcesRepository.delete(id);
   },

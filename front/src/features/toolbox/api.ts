@@ -14,5 +14,10 @@ export const toolboxApi = {
   fileUrl: (id: number) => `${BASE_URL}/api/resources/${id}/file`,
   update: (id: number, body: UpdateResourceInput) =>
     apiFetch<Resource>(`/api/resources/${id}`, { method: "PATCH", body: JSON.stringify(body) }),
+  replaceFile: (id: number, file: File) => {
+    const form = new FormData();
+    form.append("file", file);
+    return apiFetch<Resource>(`/api/resources/${id}/file`, { method: "PATCH", body: form });
+  },
   delete: (id: number) => apiFetch<void>(`/api/resources/${id}`, { method: "DELETE" }),
 };

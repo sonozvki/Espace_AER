@@ -70,6 +70,20 @@ export const resourcesController = new Elysia({ prefix: "/resources" })
     },
     { params: t.Object({ id: t.String() }), body: t.Any() }
   )
+  .patch(
+    "/:id/file",
+    async ({ params, body }) => {
+      const { file } = body;
+      if (file.type !== PDF_MIME || !file.name.toLowerCase().endsWith(".pdf"))
+        return httpStatus(400, { error: "Seuls les fichiers PDF sont acceptés" });
+      if (file.size > MAX_FILE_SIZE)
+        return httpStatus(400, { error: "Fichier trop volumineux (10 Mo max)" });
+      const updated = await resourcesService.replaceResourceFile(Number(params.id), file);
+      if (!updated) return httpStatus(404, { error: "Ressource fichier introuvable" });
+      return updated;
+    },
+    { params: t.Object({ id: t.String() }), body: t.Object({ file: t.File() }) }
+  )
   .delete(
     "/:id",
     async ({ params }) => {

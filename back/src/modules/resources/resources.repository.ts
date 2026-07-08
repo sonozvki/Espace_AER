@@ -37,6 +37,15 @@ export const resourcesRepository = {
       select: { fileName: true, fileMime: true, fileData: true },
     });
   },
+  findMeta(id: number) {
+    return prisma.resource.findUnique({ where: { id }, select: { id: true, fileName: true } });
+  },
+  updateFile(
+    id: number,
+    file: { fileName: string; fileMime: string; fileSize: number; fileData: Uint8Array<ArrayBuffer> }
+  ) {
+    return prisma.resource.update({ where: { id }, data: file, select: LIST_SELECT });
+  },
   update(id: number, data: UpdateResourceInput) {
     return prisma.resource.update({ where: { id }, data, select: LIST_SELECT });
   },

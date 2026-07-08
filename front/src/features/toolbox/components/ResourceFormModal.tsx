@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Modal,
   TextInput,
@@ -9,7 +9,6 @@ import {
   Stack,
   SegmentedControl,
   FileInput,
-  Text,
 } from "@mantine/core";
 import { useForm } from "@mantine/form";
 import { IconFileTypePdf } from "@tabler/icons-react";
@@ -18,6 +17,19 @@ import { CATEGORIES } from "../types";
 import type { Resource } from "../types";
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10 Mo, aligné sur le backend
+
+// Ajoute https:// si le protocole manque ; null si l'URL reste invalide
+function normalizeUrl(raw: string): string | null {
+  const v = raw.trim();
+  if (!v) return null;
+  const withScheme = /^[a-zA-Z][a-zA-Z0-9+.-]*:\/\//.test(v) ? v : `https://${v}`;
+  try {
+    new URL(withScheme);
+    return withScheme;
+  } catch {
+    return null;
+  }
+}
 
 interface Props {
   opened: boolean;
@@ -33,14 +45,14 @@ export function ResourceFormModal({ opened, onClose, resource }: Props) {
 
   const isEdit = !!resource;
   const isFileResource = !!resource?.fileName;
-  const [mode, setMode] = useState<"link" | "pdf">(isFileResource ? "pdf" : "link");
+  const [mode, setMode] = useState<"link" | "pdf">("link");
 
   const form = useForm({
     initialValues: {
-      title: resource?.title ?? "",
-      url: resource?.url ?? "",
-      description: resource?.description ?? "",
-      category: resource?.category ?? "Divers",
+      title: "",
+      url: "",
+      description: "",
+      category: "Divers",
       file: null as File | null,
     },
     validate: {
@@ -48,17 +60,32 @@ export function ResourceFormModal({ opened, onClose, resource }: Props) {
       url: (v) => {
         if (mode !== "link") return null;
         if (!v.trim()) return "URL requise";
-        try { new URL(v); return null; } catch { return "URL invalide"; }
+        return normalizeUrl(v) ? null : "URL invalide";
       },
       file: (v) => {
-        if (mode !== "pdf" || isEdit) return null;
-        if (!v) return "Fichier requis";
+        if (mode !== "pdf") return null;
+        if (!v) return isEdit ? null : "Fichier requis"; // en édition, remplacer est optionnel
         if (v.type !== "application/pdf") return "Seuls les PDF sont acceptés";
         if (v.size > MAX_FILE_SIZE) return "Fichier trop volumineux (10 Mo max)";
         return null;
       },
     },
   });
+
+  // Préremplit le formulaire quand une ressource à éditer est fournie
+  useEffect(() => {
+    if (resource) {
+      form.setValues({
+        title: resource.title,
+        url: resource.url ?? "",
+        description: resource.description,
+        category: resource.category,
+        file: null,
+      });
+      setMode(resource.fileName ? "pdf" : "link");
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [resource?.id]);
 
   function handleSubmit(values: typeof form.values) {
     const common = {
@@ -68,18 +95,21 @@ export function ResourceFormModal({ opened, onClose, resource }: Props) {
     };
     const onSuccess = () => { form.reset(); setMode("link"); onClose(); };
     if (isEdit && resource) {
-      const data = isFileResource ? common : { ...common, url: values.url.trim() };
-      update.mutate({ id: resource.id, data }, { onSuccess });
+      const data = isFileResource ? common : { ...common, url: normalizeUrl(values.url) ?? values.url };
+      update.mutate(
+        { id: resource.id, data, file: isFileResource ? values.file : undefined },
+        { onSuccess }
+      );
     } else if (mode === "pdf") {
       upload.mutate({ ...common, file: values.file as File }, { onSuccess });
     } else {
-      create.mutate({ ...common, url: values.url.trim() }, { onSuccess });
+      create.mutate({ ...common, url: normalizeUrl(values.url) ?? values.url }, { onSuccess });
     }
   }
 
   function handleClose() {
     form.reset();
-    setMode(isFileResource ? "pdf" : "link");
+    setMode("link");
     onClose();
   }
 
@@ -131,12 +161,15 @@ export function ResourceFormModal({ opened, onClose, resource }: Props) {
             />
           )}
           {isEdit && isFileResource && (
-            <Group gap={6}>
-              <IconFileTypePdf size={16} color="var(--mantine-color-red-6)" />
-              <Text size="sm" c="dimmed">
-                {resource?.fileName} — le fichier ne peut pas être remplacé
-              </Text>
-            </Group>
+            <FileInput
+              label="Remplacer le PDF"
+              description={`Fichier actuel : ${resource?.fileName}`}
+              placeholder="Sélectionner un nouveau PDF (optionnel)"
+              accept="application/pdf"
+              clearable
+              leftSection={<IconFileTypePdf size={16} />}
+              {...form.getInputProps("file")}
+            />
           )}
           <Select
             label="Catégorie"

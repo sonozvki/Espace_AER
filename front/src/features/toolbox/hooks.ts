@@ -34,8 +34,10 @@ export function useUploadResource() {
 export function useUpdateResource() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: ({ id, data }: { id: number; data: UpdateResourceInput }) =>
-      toolboxApi.update(id, data),
+    mutationFn: async ({ id, data, file }: { id: number; data: UpdateResourceInput; file?: File | null }) => {
+      if (file) await toolboxApi.replaceFile(id, file);
+      return toolboxApi.update(id, data);
+    },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["resources"] });
       notifications.show({ message: "Ressource modifiée", color: "green" });
