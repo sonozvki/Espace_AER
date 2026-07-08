@@ -1,5 +1,6 @@
-import { Modal, TextInput, Button, Group, Text, Loader, Center, Stack } from "@mantine/core";
+import { Modal, TextInput, Button, Group, Text, Loader, Center, Stack, SegmentedControl } from "@mantine/core";
 import { useState, useEffect } from "react";
+import { useMediaQuery } from "@mantine/hooks";
 import MDEditor from "@uiw/react-md-editor";
 import { useMemo, useCreateMemo, useUpdateMemo } from "../hooks";
 
@@ -54,10 +55,12 @@ export function MemoEditorModal({ opened, onClose, memoId }: Props) {
   const { data: memo, isLoading } = useMemo(memoId ?? null);
   const createMemo = useCreateMemo();
   const updateMemo = useUpdateMemo();
+  const isMobile = !useMediaQuery("(min-width: 768px)");
 
   const [title, setTitle] = useState(todayTitle());
   const [content, setContent] = useState(DEFAULT_TEMPLATE);
   const [titleError, setTitleError] = useState("");
+  const [previewMode, setPreviewMode] = useState<"edit" | "preview">("edit");
 
   useEffect(() => {
     if (isEdit && memo) {
@@ -116,18 +119,33 @@ export function MemoEditorModal({ opened, onClose, memoId }: Props) {
             styles={{ input: { fontFamily: '"Anton", sans-serif', fontSize: 18 } }}
           />
 
-          <Text size="xs" c="dimmed">
-            Markdown supporté, aperçu en temps réel à droite.
-          </Text>
+          {isMobile && (
+            <SegmentedControl
+              value={previewMode}
+              onChange={(v) => setPreviewMode(v as "edit" | "preview")}
+              data={[
+                { value: "edit", label: "Édition" },
+                { value: "preview", label: "Aperçu" },
+              ]}
+              fullWidth
+              size="sm"
+            />
+          )}
+
+          {!isMobile && (
+            <Text size="xs" c="dimmed">
+              Markdown supporté, aperçu en temps réel à droite.
+            </Text>
+          )}
 
           <div data-color-mode="dark" style={{ flex: 1, overflow: "hidden" }}>
             <MDEditor
               value={content}
               onChange={(v) => setContent(v ?? "")}
-              preview="live"
+              preview={isMobile ? previewMode : "live"}
               height="100%"
               style={{ height: "100%" }}
-              visibleDragbar={false}
+              visibleDragbar={isMobile ? false : true}
             />
           </div>
 

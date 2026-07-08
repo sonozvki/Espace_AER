@@ -1,4 +1,4 @@
-import { Elysia, t } from "elysia";
+import { Elysia, t, redirect } from "elysia";
 import { getAuthorizationUrl, handleCallback } from "@/auth/auth.service";
 import { createSession, verifySession, sessionCookieOptions, COOKIE } from "@/auth/session";
 import { prisma } from "@/db/prisma";
@@ -8,7 +8,7 @@ import { encrypt } from "@/lib/crypto";
 import { z } from "zod";
 
 const WhitelistBodySchema = z.object({
-  email: z.string().email(),
+  email: z.email(),
 });
 
 const EpitechTokenBodySchema = z.object({
@@ -24,7 +24,7 @@ async function getSession(cookie: Record<string, { value?: unknown }>) {
 }
 
 export const authController = new Elysia({ prefix: "/auth" })
-  .get("/login", async ({ cookie, redirect }) => {
+  .get("/login", async ({ cookie }) => {
     // Dev mode: no Microsoft credentials → auto-login as ADMIN
     if (!process.env["MICROSOFT_CLIENT_ID"]) {
       const devUser = await prisma.user.upsert({
@@ -36,40 +36,34 @@ export const authController = new Elysia({ prefix: "/auth" })
       cookie[COOKIE]!.set(sessionCookieOptions(token));
       return redirect(FRONTEND);
     }
-    // Production: redirect to Microsoft OAuth
     const { url, state, codeVerifier } = getAuthorizationUrl();
-    cookie["oauth_state"]!.set({ value: state, httpOnly: true, sameSite: "lax" as const, maxAge: 600, path: "/" });
-    cookie["oauth_verifier"]!.set({ value: codeVerifier, httpOnly: true, sameSite: "lax" as const, maxAge: 600, path: "/" });
+    const isProd = process.env["NODE_ENV"] === "production";
+    cookie["oauth_state"]!.set({ value: state, httpOnly: true, secure: isProd, sameSite: "lax" as const, maxAge: 600, path: "/" });
+    cookie["oauth_verifier"]!.set({ value: codeVerifier, httpOnly: true, secure: isProd, sameSite: "lax" as const, maxAge: 600, path: "/" });
     return redirect(url.toString());
   })
 
   .get(
     "/callback",
-    async ({ query, cookie, set, redirect }) => {
-      console.log("[auth/callback] hit", new Date().toISOString(), "code prefix:", query.code?.slice(0, 8));
+    async ({ query, cookie }) => {
       if (query.error) {
-        set.redirect = `${FRONTEND}/login?error=${encodeURIComponent(query.error)}`;
-        return;
+        return redirect(`${FRONTEND}/login?error=${encodeURIComponent(String(query.error))}`);
       }
       const storedState = cookie["oauth_state"]?.value as string | undefined;
       const codeVerifier = cookie["oauth_verifier"]?.value as string | undefined;
-      console.log("[auth/callback] storedState:", !!storedState, "verifier len:", codeVerifier?.length, "verifier prefix:", codeVerifier?.slice(0, 6), "stateMatch:", query.state === storedState);
       if (!storedState || !codeVerifier || query.state !== storedState || !query.code) {
         return httpStatus(400, { error: "OAuth state invalide" });
       }
       try {
         const user = await handleCallback(query.code, codeVerifier);
-        console.log("[auth/callback] user ok:", user.id, user.email);
         const token = await createSession(user);
-        console.log("[auth/callback] session created, setting cookie...");
         cookie[COOKIE]!.set(sessionCookieOptions(token));
-        console.log("[auth/callback] cookie set, redirecting to", FRONTEND);
         return redirect(FRONTEND);
       } catch (err) {
         if (err instanceof Error && err.message === "UNAUTHORIZED") {
           return redirect(`${FRONTEND}/login?error=unauthorized`);
         }
-        console.error("[auth/callback] CAUGHT ERROR:", err);
+        console.error("[auth/callback] error:", err);
         return httpStatus(500, { error: "Erreur d'authentification" });
       }
     },
@@ -96,7 +90,6 @@ export const authController = new Elysia({ prefix: "/auth" })
     };
   })
 
-  // Cookie Epitech (intra.epitech.eu) — stocké chiffré, propre à l'utilisateur connecté
   .put(
     "/epitech-token",
     async ({ cookie, body }) => {
@@ -104,8 +97,6 @@ export const authController = new Elysia({ prefix: "/auth" })
       if (!session) return httpStatus(401, { error: "Non authentifié" });
       const parsed = EpitechTokenBodySchema.safeParse(body);
       if (!parsed.success) return httpStatus(400, { error: "Token invalide" });
-      // Valeur du cookie "user" de intra.epitech.eu. On accepte aussi un collage
-      // de la forme "user=xxx" → on ne garde que la valeur.
       const token = parsed.data.token.trim().replace(/^user=/i, "").trim();
       await prisma.user.update({
         where: { id: Number(session.sub) },
@@ -129,17 +120,17 @@ export const authController = new Elysia({ prefix: "/auth" })
   .get("/users", async ({ cookie }) => {
     const session = await getSession(cookie);
     if (!session) return httpStatus(401, { error: "Non authentifié" });
+    if (session.role !== "ADMIN") return httpStatus(403, { error: "Accès refusé" });
     return prisma.user.findMany({
       select: { id: true, name: true, email: true, role: true },
       orderBy: { name: "asc" },
     });
   })
 
-  // Whitelist management — ADMIN only
   .get("/whitelist", async ({ cookie }) => {
     const session = await getSession(cookie);
     if (!session) return httpStatus(401, { error: "Non authentifié" });
-    if (session.role !== "ADMIN") return httpStatus(403, { error: "Réservé aux admins" });
+    if (session.role !== "ADMIN") return httpStatus(403, { error: "Accès refusé" });
     return prisma.whitelist.findMany({ orderBy: { createdAt: "asc" } });
   })
 
@@ -148,9 +139,9 @@ export const authController = new Elysia({ prefix: "/auth" })
     async ({ cookie, body }) => {
       const session = await getSession(cookie);
       if (!session) return httpStatus(401, { error: "Non authentifié" });
-      if (session.role !== "ADMIN") return httpStatus(403, { error: "Réservé aux admins" });
+      if (session.role !== "ADMIN") return httpStatus(403, { error: "Accès refusé" });
       const parsed = WhitelistBodySchema.safeParse(body);
-      if (!parsed.success) return httpStatus(400, { error: parsed.error.flatten() });
+      if (!parsed.success) return httpStatus(400, { error: z.flattenError(parsed.error) });
       return addToWhitelist(parsed.data.email);
     },
     { body: t.Any() }
@@ -161,8 +152,11 @@ export const authController = new Elysia({ prefix: "/auth" })
     async ({ cookie, params }) => {
       const session = await getSession(cookie);
       if (!session) return httpStatus(401, { error: "Non authentifié" });
-      if (session.role !== "ADMIN") return httpStatus(403, { error: "Réservé aux admins" });
-      return removeFromWhitelist(decodeURIComponent(params.email));
+      if (session.role !== "ADMIN") return httpStatus(403, { error: "Accès refusé" });
+      const email = decodeURIComponent(params.email);
+      const parsed = WhitelistBodySchema.safeParse({ email });
+      if (!parsed.success) return httpStatus(400, { error: "Email invalide" });
+      return removeFromWhitelist(parsed.data.email);
     },
     { params: t.Object({ email: t.String() }) }
   )

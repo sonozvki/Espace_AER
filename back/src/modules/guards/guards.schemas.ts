@@ -5,7 +5,7 @@ export const GenerateGuardsSchema = z.object({
 });
 
 export const AssignGuardSchema = z.object({
-  aerId: z.number().int().nullable(),
+  guardAerId: z.number().int().nullable(),
 });
 
 export type GenerateGuardsInput = z.infer<typeof GenerateGuardsSchema>;

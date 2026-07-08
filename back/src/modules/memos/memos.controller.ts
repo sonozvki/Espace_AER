@@ -1,4 +1,5 @@
 import { Elysia, t } from "elysia";
+import { z } from "zod";
 import { memosService } from "./memos.service";
 import { CreateMemoSchema, UpdateMemoSchema } from "./memos.schemas";
 import { verifySession, COOKIE } from "@/auth/session";
@@ -21,13 +22,13 @@ export const memosController = new Elysia({ prefix: "/memos" })
 
   .post("/", async ({ body }) => {
     const parsed = CreateMemoSchema.safeParse(body);
-    if (!parsed.success) return httpStatus(400, { error: parsed.error.flatten() });
+    if (!parsed.success) return httpStatus(400, { error: z.flattenError(parsed.error) });
     return httpStatus(201, await memosService.createMemo(parsed.data));
   }, { body: t.Any() })
 
   .patch("/:id", async ({ params, body }) => {
     const parsed = UpdateMemoSchema.safeParse(body);
-    if (!parsed.success) return httpStatus(400, { error: parsed.error.flatten() });
+    if (!parsed.success) return httpStatus(400, { error: z.flattenError(parsed.error) });
     return memosService.updateMemo(Number(params.id), parsed.data);
   }, { params: t.Object({ id: t.String() }), body: t.Any() })
 

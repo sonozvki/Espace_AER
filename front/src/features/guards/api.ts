@@ -10,9 +10,21 @@ export const guardsApi = {
       body: JSON.stringify({ year }),
     }),
 
-  assign: (id: number, aerId: number | null) =>
+  assign: (id: number, guardAerId: number | null) =>
     apiFetch<Guard>(`/api/guards/${id}/assign`, {
       method: "PATCH",
-      body: JSON.stringify({ aerId }),
+      body: JSON.stringify({ guardAerId }),
     }),
+
+  addAbsent: (id: number) =>
+    apiFetch<Guard>(`/api/guards/${id}/absent`, { method: "POST" }),
+
+  removeAbsent: (id: number) =>
+    apiFetch<Guard>(`/api/guards/${id}/absent`, { method: "DELETE" }),
+
+  addUnavailable: (id: number) =>
+    apiFetch<Guard>(`/api/guards/${id}/unavailable`, { method: "POST" }),
+
+  removeUnavailable: (id: number) =>
+    apiFetch<Guard>(`/api/guards/${id}/unavailable`, { method: "DELETE" }),
 };

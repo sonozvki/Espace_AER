@@ -68,9 +68,10 @@ body {
   --epi-border:   var(--mantine-color-dark-4);   /* #3a3a3a — bordures          */
   --epi-muted:    var(--mantine-color-dark-3);   /* #aaaaaa — texte atténué     */
   --epi-ghost:    var(--mantine-color-dark-2);   /* #777777 — très atténué      */
-  --epi-today-bg: var(--mantine-color-epitech-9);
-  --epi-hero:     linear-gradient(135deg, var(--mantine-color-epitech-9) 0%, var(--mantine-color-dark-6) 100%);
-  --epi-chip-bg:  rgba(255, 255, 255, 0.05);
+  --epi-today-bg:   var(--mantine-color-epitech-9);
+  --epi-hero:       linear-gradient(135deg, var(--mantine-color-epitech-9) 0%, var(--mantine-color-dark-6) 100%);
+  --epi-hero-bg:    #363636;
+  --epi-chip-bg:    rgba(255, 255, 255, 0.05);
   --epi-chip-border: rgba(255, 255, 255, 0.08);
 }
 
@@ -81,9 +82,10 @@ body {
   --epi-border:   var(--mantine-color-gray-3);   /* bordures                    */
   --epi-muted:    var(--mantine-color-gray-6);   /* texte atténué               */
   --epi-ghost:    var(--mantine-color-gray-5);   /* très atténué                */
-  --epi-today-bg: var(--mantine-color-epitech-0);
-  --epi-hero:     linear-gradient(135deg, var(--mantine-color-epitech-1) 0%, #ffffff 100%);
-  --epi-chip-bg:  rgba(0, 0, 0, 0.04);
+  --epi-today-bg:    var(--mantine-color-epitech-0);
+  --epi-hero:        linear-gradient(135deg, var(--mantine-color-epitech-1) 0%, #ffffff 100%);
+  --epi-hero-bg:     var(--epi-blue);
+  --epi-chip-bg:     rgba(0, 0, 0, 0.04);
   --epi-chip-border: rgba(0, 0, 0, 0.08);
 }
 

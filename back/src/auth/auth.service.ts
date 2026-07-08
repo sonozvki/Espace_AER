@@ -2,7 +2,6 @@ import { MicrosoftEntraId, generateCodeVerifier, generateState } from "arctic";
 import { prisma } from "@/db/prisma";
 import { findWhitelistEntry } from "@/auth/whitelist";
 
-// Only instantiate if credentials are configured (not required in dev mode)
 const microsoft = process.env["MICROSOFT_CLIENT_ID"]
   ? new MicrosoftEntraId(
       process.env["MICROSOFT_TENANT_ID"]!,
@@ -18,17 +17,13 @@ export function getAuthorizationUrl(): { url: URL; state: string; codeVerifier: 
   const codeVerifier = generateCodeVerifier();
   const url = microsoft.createAuthorizationURL(state, codeVerifier, ["openid", "profile", "email"]);
   url.searchParams.set("prompt", "select_account");
-  console.log("[auth/service] authorization URL params:", Object.fromEntries(url.searchParams));
   return { url, state, codeVerifier };
 }
 
 export async function handleCallback(code: string, codeVerifier: string) {
   if (!microsoft) throw new Error("Microsoft OAuth not configured");
-  console.log("[auth/service] validateAuthorizationCode start, code:", code.slice(0, 8), "verifier length:", codeVerifier.length);
   const tokens = await microsoft.validateAuthorizationCode(code, codeVerifier);
-  console.log("[auth/service] validateAuthorizationCode success");
   const idToken = tokens.idToken();
-  console.log("[auth/service] idToken present:", !!idToken);
 
   const claims = decodeJwtPayload(idToken) as {
     email?: string;
@@ -37,10 +32,8 @@ export async function handleCallback(code: string, codeVerifier: string) {
   };
   const email = claims.email ?? claims.preferred_username ?? "";
   const name = claims.name ?? email;
-  console.log("[auth/service] email:", email, "name:", name);
 
   const whitelist = await findWhitelistEntry(email);
-  console.log("[auth/service] whitelist entry:", whitelist?.role ?? "NOT FOUND");
   if (!whitelist) throw new Error("UNAUTHORIZED");
 
   return prisma.user.upsert({
