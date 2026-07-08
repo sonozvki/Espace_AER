@@ -1,4 +1,4 @@
-import { Box, Text, Button, Stack, Tooltip, Badge, Group } from "@mantine/core";
+import { Box, Text, Button, Stack, Tooltip, Badge, Group, SimpleGrid } from "@mantine/core";
 import type { Guard } from "../types";
 import type { User } from "@/features/shared/types";
 import { useAssignGuard, useAddAbsent, useRemoveAbsent, useAddUnavailable, useRemoveUnavailable } from "../hooks";
@@ -245,38 +245,63 @@ interface Props {
   month: number;
   guardsByDate: Map<string, Guard>;
   currentUser: User | null;
+  weekIndex?: number;
+  onWeekChange?: (index: number) => void;
+  isMobile?: boolean;
 }
 
-export function GuardCalendar({ year, month, guardsByDate, currentUser }: Props) {
+export function GuardCalendar({
+  year,
+  month,
+  guardsByDate,
+  absencesByDate,
+  currentUser,
+  weekIndex,
+  onWeekChange,
+  isMobile = false,
+}: Props) {
   const weeks = buildWeeks(year, month);
+  const displayWeek = isMobile && weekIndex !== undefined ? weeks[weekIndex] : undefined;
+
+  if (isMobile && displayWeek) {
+    return (
+      <Stack gap={8}>
+        {/* Mobile: single week, 1 day per row */}
+        <Stack gap={6}>
+          {displayWeek.map((day, di) =>
+            day ? (
+              <Box key={day.toISOString()}>
+                <Text size="sm" fw={600} c="dimmed" mb={4}>
+                  {DAY_HEADERS[di]} {day.getDate()}
+                </Text>
+                <DayCell
+                  day={day}
+                  guard={guardsByDate.get(toDateKey(day)) ?? null}
+                  absences={absencesByDate.get(toDateKey(day)) ?? []}
+                  currentUser={currentUser}
+                />
+              </Box>
+            ) : null
+          )}
+        </Stack>
+      </Stack>
+    );
+  }
 
   return (
     <Box>
-      <Box
-        style={{
-          display: "grid",
-          gridTemplateColumns: "repeat(6, 1fr)",
-          gap: 8,
-          marginBottom: 8,
-        }}
-      >
+      {/* Desktop: full month, 6 columns */}
+      <SimpleGrid cols={{ base: 2, sm: 6 }} spacing={8} mb={8}>
         {DAY_HEADERS.map((h) => (
           <Text key={h} size="sm" fw={600} c="dimmed" ta="center" py={4}>
             {h}
           </Text>
         ))}
-      </Box>
+      </SimpleGrid>
 
       <Stack gap={8}>
         {weeks.map((week, wi) => (
-          <Box
-            key={wi}
-            style={{
-              display: "grid",
-              gridTemplateColumns: "repeat(6, 1fr)",
-              gap: 8,
-            }}
-          >
+          <SimpleGrid key={wi} cols={{ base: 2, sm: 6 }} spacing={8}>
             {week.map((day, di) =>
               day ? (
                 <DayCell
@@ -289,7 +314,7 @@ export function GuardCalendar({ year, month, guardsByDate, currentUser }: Props)
                 <Box key={`empty-${wi}-${di}`} style={{ minHeight: 120 }} />
               )
             )}
-          </Box>
+          </SimpleGrid>
         ))}
       </Stack>
     </Box>

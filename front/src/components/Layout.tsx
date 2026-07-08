@@ -15,7 +15,7 @@ const NAV_ITEMS = [
 ];
 
 export function Layout() {
-  const [opened, { toggle }] = useDisclosure();
+  const [opened, { toggle, close }] = useDisclosure();
   const navigate = useNavigate();
   const location = useLocation();
   const { user, isLoading, isAuthenticated } = useAuth();
@@ -74,7 +74,10 @@ export function Layout() {
             key={item.path}
             label={item.label}
             active={location.pathname.startsWith(item.path)}
-            onClick={() => navigate(item.path)}
+            onClick={() => {
+              navigate(item.path);
+              close();
+            }}
             mb={4}
           />
         ))}

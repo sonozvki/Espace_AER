@@ -14,7 +14,9 @@ export async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> 
     credentials: "include",
     ...init,
     headers: {
-      ...(init?.body !== undefined ? { "Content-Type": "application/json" } : {}),
+      ...(init?.body !== undefined && !(init.body instanceof FormData)
+        ? { "Content-Type": "application/json" }
+        : {}),
       ...init?.headers,
     },
   });
