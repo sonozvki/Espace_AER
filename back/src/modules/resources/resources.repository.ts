@@ -1,5 +1,5 @@
 import { prisma } from "@/db/prisma";
-import type { CreateResourceInput, UploadResourceInput } from "./resources.schemas";
+import type { CreateResourceInput, UploadResourceInput, UpdateResourceInput } from "./resources.schemas";
 
 // fileData est exclu des listes : le binaire n'est chargé que via findFile()
 const LIST_SELECT = {
@@ -36,6 +36,9 @@ export const resourcesRepository = {
       where: { id },
       select: { fileName: true, fileMime: true, fileData: true },
     });
+  },
+  update(id: number, data: UpdateResourceInput) {
+    return prisma.resource.update({ where: { id }, data, select: LIST_SELECT });
   },
   delete(id: number) {
     return prisma.resource.delete({ where: { id }, select: { id: true } });

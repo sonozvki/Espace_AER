@@ -9,30 +9,38 @@ import {
   Stack,
   SegmentedControl,
   FileInput,
+  Text,
 } from "@mantine/core";
 import { useForm } from "@mantine/form";
 import { IconFileTypePdf } from "@tabler/icons-react";
-import { useCreateResource, useUploadResource } from "../hooks";
+import { useCreateResource, useUploadResource, useUpdateResource } from "../hooks";
 import { CATEGORIES } from "../types";
+import type { Resource } from "../types";
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10 Mo, aligné sur le backend
 
 interface Props {
   opened: boolean;
   onClose: () => void;
+  /** Ressource à modifier — absent en mode création */
+  resource?: Resource;
 }
 
-export function ResourceFormModal({ opened, onClose }: Props) {
+export function ResourceFormModal({ opened, onClose, resource }: Props) {
   const create = useCreateResource();
   const upload = useUploadResource();
-  const [mode, setMode] = useState<"link" | "pdf">("link");
+  const update = useUpdateResource();
+
+  const isEdit = !!resource;
+  const isFileResource = !!resource?.fileName;
+  const [mode, setMode] = useState<"link" | "pdf">(isFileResource ? "pdf" : "link");
 
   const form = useForm({
     initialValues: {
-      title: "",
-      url: "",
-      description: "",
-      category: "Divers",
+      title: resource?.title ?? "",
+      url: resource?.url ?? "",
+      description: resource?.description ?? "",
+      category: resource?.category ?? "Divers",
       file: null as File | null,
     },
     validate: {
@@ -43,7 +51,7 @@ export function ResourceFormModal({ opened, onClose }: Props) {
         try { new URL(v); return null; } catch { return "URL invalide"; }
       },
       file: (v) => {
-        if (mode !== "pdf") return null;
+        if (mode !== "pdf" || isEdit) return null;
         if (!v) return "Fichier requis";
         if (v.type !== "application/pdf") return "Seuls les PDF sont acceptés";
         if (v.size > MAX_FILE_SIZE) return "Fichier trop volumineux (10 Mo max)";
@@ -59,7 +67,10 @@ export function ResourceFormModal({ opened, onClose }: Props) {
       category: values.category,
     };
     const onSuccess = () => { form.reset(); setMode("link"); onClose(); };
-    if (mode === "pdf") {
+    if (isEdit && resource) {
+      const data = isFileResource ? common : { ...common, url: values.url.trim() };
+      update.mutate({ id: resource.id, data }, { onSuccess });
+    } else if (mode === "pdf") {
       upload.mutate({ ...common, file: values.file as File }, { onSuccess });
     } else {
       create.mutate({ ...common, url: values.url.trim() }, { onSuccess });
@@ -68,37 +79,47 @@ export function ResourceFormModal({ opened, onClose }: Props) {
 
   function handleClose() {
     form.reset();
-    setMode("link");
+    setMode(isFileResource ? "pdf" : "link");
     onClose();
   }
 
+  const showUrlField = isEdit ? !isFileResource : mode === "link";
+
   return (
-    <Modal opened={opened} onClose={handleClose} title="Ajouter une ressource" size="md">
+    <Modal
+      opened={opened}
+      onClose={handleClose}
+      title={isEdit ? "Modifier la ressource" : "Ajouter une ressource"}
+      size="md"
+    >
       <form onSubmit={form.onSubmit(handleSubmit)}>
         <Stack gap="sm">
-          <SegmentedControl
-            value={mode}
-            onChange={(v) => setMode(v as "link" | "pdf")}
-            data={[
-              { label: "Lien", value: "link" },
-              { label: "Fichier PDF", value: "pdf" },
-            ]}
-            fullWidth
-          />
+          {!isEdit && (
+            <SegmentedControl
+              value={mode}
+              onChange={(v) => setMode(v as "link" | "pdf")}
+              data={[
+                { label: "Lien", value: "link" },
+                { label: "Fichier PDF", value: "pdf" },
+              ]}
+              fullWidth
+            />
+          )}
           <TextInput
             label="Titre"
             placeholder={mode === "pdf" ? "Guide de survie AER" : "Intranet Epitech"}
             required
             {...form.getInputProps("title")}
           />
-          {mode === "link" ? (
+          {showUrlField && (
             <TextInput
               label="URL"
               placeholder="https://intra.epitech.eu"
               required
               {...form.getInputProps("url")}
             />
-          ) : (
+          )}
+          {!isEdit && mode === "pdf" && (
             <FileInput
               label="Fichier PDF"
               placeholder="Sélectionner un PDF (10 Mo max)"
@@ -108,6 +129,14 @@ export function ResourceFormModal({ opened, onClose }: Props) {
               leftSection={<IconFileTypePdf size={16} />}
               {...form.getInputProps("file")}
             />
+          )}
+          {isEdit && isFileResource && (
+            <Group gap={6}>
+              <IconFileTypePdf size={16} color="var(--mantine-color-red-6)" />
+              <Text size="sm" c="dimmed">
+                {resource?.fileName} — le fichier ne peut pas être remplacé
+              </Text>
+            </Group>
           )}
           <Select
             label="Catégorie"
@@ -125,8 +154,11 @@ export function ResourceFormModal({ opened, onClose }: Props) {
             <Button variant="default" onClick={handleClose}>
               Annuler
             </Button>
-            <Button type="submit" loading={create.isPending || upload.isPending}>
-              Ajouter
+            <Button
+              type="submit"
+              loading={create.isPending || upload.isPending || update.isPending}
+            >
+              {isEdit ? "Enregistrer" : "Ajouter"}
             </Button>
           </Group>
         </Stack>

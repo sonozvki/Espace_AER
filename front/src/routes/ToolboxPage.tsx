@@ -18,6 +18,7 @@ export function ToolboxPage() {
   const { data: resources, isLoading } = useResources();
   const deleteResource = useDeleteResource();
   const [formOpened, { open, close }] = useDisclosure(false);
+  const [toEdit, setToEdit] = useState<Resource | null>(null);
   const [toDelete, setToDelete] = useState<Resource | null>(null);
 
   const groups = groupByCategory(resources ?? []);
@@ -60,6 +61,7 @@ export function ToolboxPage() {
               <ResourceCard
                 key={r.id}
                 resource={r}
+                onEdit={() => setToEdit(r)}
                 onDelete={() => setToDelete(r)}
               />
             ))}
@@ -68,6 +70,11 @@ export function ToolboxPage() {
       ))}
 
       <ResourceFormModal opened={formOpened} onClose={close} />
+
+      {/* Édition — instance montée à la demande pour préremplir le formulaire */}
+      {toEdit && (
+        <ResourceFormModal opened resource={toEdit} onClose={() => setToEdit(null)} />
+      )}
 
       <Modal
         opened={!!toDelete}

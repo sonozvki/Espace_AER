@@ -1,5 +1,5 @@
 import { resourcesRepository } from "./resources.repository";
-import type { CreateResourceInput, UploadResourceInput } from "./resources.schemas";
+import type { CreateResourceInput, UploadResourceInput, UpdateResourceInput } from "./resources.schemas";
 
 export const resourcesService = {
   listResources() {
@@ -19,6 +19,9 @@ export const resourcesService = {
   },
   getResourceFile(id: number) {
     return resourcesRepository.findFile(id);
+  },
+  updateResource(id: number, data: UpdateResourceInput) {
+    return resourcesRepository.update(id, data);
   },
   deleteResource(id: number) {
     return resourcesRepository.delete(id);

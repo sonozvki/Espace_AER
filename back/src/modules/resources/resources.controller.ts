@@ -1,7 +1,7 @@
 import { Elysia, t } from "elysia";
 import { z } from "zod";
 import { resourcesService } from "./resources.service";
-import { CreateResourceSchema, UploadResourceSchema, MAX_FILE_SIZE, PDF_MIME } from "./resources.schemas";
+import { CreateResourceSchema, UploadResourceSchema, UpdateResourceSchema, MAX_FILE_SIZE, PDF_MIME } from "./resources.schemas";
 import { verifySession, COOKIE } from "@/auth/session";
 import { httpStatus } from "@/lib/http";
 
@@ -60,6 +60,15 @@ export const resourcesController = new Elysia({ prefix: "/resources" })
       });
     },
     { params: t.Object({ id: t.String() }) }
+  )
+  .patch(
+    "/:id",
+    async ({ params, body }) => {
+      const parsed = UpdateResourceSchema.safeParse(body);
+      if (!parsed.success) return httpStatus(400, { error: z.flattenError(parsed.error) });
+      return resourcesService.updateResource(Number(params.id), parsed.data);
+    },
+    { params: t.Object({ id: t.String() }), body: t.Any() }
   )
   .delete(
     "/:id",

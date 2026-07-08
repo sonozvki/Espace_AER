@@ -1,7 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { notifications } from "@mantine/notifications";
 import { toolboxApi } from "./api";
-import type { CreateResourceInput, UploadResourceInput } from "./types";
+import type { CreateResourceInput, UploadResourceInput, UpdateResourceInput } from "./types";
 
 export function useResources() {
   return useQuery({ queryKey: ["resources"], queryFn: toolboxApi.list });
@@ -28,6 +28,19 @@ export function useUploadResource() {
       notifications.show({ message: "PDF ajouté", color: "green" });
     },
     onError: () => notifications.show({ message: "Erreur lors de l'upload", color: "red" }),
+  });
+}
+
+export function useUpdateResource() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, data }: { id: number; data: UpdateResourceInput }) =>
+      toolboxApi.update(id, data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["resources"] });
+      notifications.show({ message: "Ressource modifiée", color: "green" });
+    },
+    onError: () => notifications.show({ message: "Erreur lors de la modification", color: "red" }),
   });
 }
 
