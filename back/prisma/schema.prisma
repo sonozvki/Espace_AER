@@ -106,9 +106,13 @@ model AuditLog {
 model Resource {
   id          Int      @id @default(autoincrement())
   title       String
-  url         String
+  url         String? // null pour les ressources de type fichier
   description String   @default("")
   category    String   @default("Divers")
+  fileName    String? // renseignés uniquement pour les ressources de type fichier (PDF)
+  fileMime    String?
+  fileSize    Int?
+  fileData    Bytes?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 }
