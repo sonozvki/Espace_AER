@@ -17,5 +17,15 @@ export const UploadResourceSchema = z.object({
 
 export type UploadResourceInput = z.infer<typeof UploadResourceSchema>;
 
+// Mise à jour des métadonnées ; le fichier se remplace via PATCH /:id/file
+export const UpdateResourceSchema = z.object({
+  title: z.string().min(1).max(200).optional(),
+  url: z.string().url().optional(),
+  description: z.string().optional(),
+  category: z.string().optional(),
+});
+
+export type UpdateResourceInput = z.infer<typeof UpdateResourceSchema>;
+
 export const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10 Mo
 export const PDF_MIME = "application/pdf";
