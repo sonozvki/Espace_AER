@@ -1,4 +1,4 @@
-import { AppShell, Burger, Group, NavLink, Text, ActionIcon, useMantineColorScheme } from "@mantine/core";
+import { AppShell, Burger, Group, NavLink, Text, ActionIcon, useMantineColorScheme, Drawer, Stack, Divider } from "@mantine/core";
 import { useDisclosure } from "@mantine/hooks";
 import { IconSun, IconMoon } from "@tabler/icons-react";
 import { Outlet, useNavigate, useLocation, Navigate } from "react-router-dom";
@@ -29,70 +29,80 @@ export function Layout() {
     navigate("/login");
   }
 
+  function navTo(path: string) {
+    navigate(path);
+    close();
+  }
+
   return (
-    <AppShell
-      header={{ height: 56 }}
-      navbar={{ width: 220, breakpoint: "sm", collapsed: { mobile: !opened } }}
-      padding="md"
-    >
-      <AppShell.Header
-        bg={colorScheme === "light" ? "var(--epi-blue)" : "var(--epi-panel)"}
-        style={{ borderBottom: colorScheme === "light" ? "none" : "1px solid var(--epi-border)" }}
+    <>
+      <Drawer
+        opened={opened}
+        onClose={close}
+        size={240}
+        padding="md"
+        withCloseButton={false}
+        styles={{ body: { display: "flex", flexDirection: "column", height: "100%", padding: 0 } }}
       >
-        <Group h="100%" px="md" justify="space-between">
-          <Group>
-            <Burger
-              opened={opened}
-              onClick={toggle}
-              hiddenFrom="sm"
-              size="sm"
-              color={colorScheme === "light" ? "white" : undefined}
-            />
-            <Text ff="Anton, sans-serif" size="xl" c={colorScheme === "light" ? "white" : "epitech.4"}>
-              Espace AER
-            </Text>
-          </Group>
-          <Group gap="sm">
-            <ActionIcon
-              variant="subtle"
-              color={colorScheme === "light" ? "white" : "gray"}
-              onClick={toggleColorScheme}
-              aria-label="Basculer entre mode clair et sombre"
-            >
-              {colorScheme === "dark" ? <IconSun size={18} /> : <IconMoon size={18} />}
-            </ActionIcon>
-            <Text size="sm" c={colorScheme === "light" ? "white" : "dimmed"}>
-              {user?.name}
-            </Text>
-          </Group>
+        <Group px="md" h={56} style={{ borderBottom: "1px solid var(--epi-border)", flexShrink: 0 }}>
+          <Burger opened size="sm" onClick={close} />
+          <Text ff="Anton, sans-serif" size="xl" c="epitech.4">Espace AER</Text>
         </Group>
-      </AppShell.Header>
 
-      <AppShell.Navbar p="xs" bg="var(--epi-panel)" style={{ borderRight: "1px solid var(--epi-border)" }}>
-        {NAV_ITEMS.map((item) => (
-          <NavLink
-            key={item.path}
-            label={item.label}
-            active={location.pathname.startsWith(item.path)}
-            onClick={() => {
-              navigate(item.path);
-              close();
-            }}
-            mb={4}
-          />
-        ))}
+        <Stack gap={4} p="xs" style={{ flex: 1, overflowY: "auto" }}>
+          {NAV_ITEMS.map((item) => (
+            <NavLink
+              key={item.path}
+              label={item.label}
+              active={location.pathname.startsWith(item.path)}
+              onClick={() => navTo(item.path)}
+            />
+          ))}
+        </Stack>
 
-        <NavLink
-          label="Se déconnecter"
-          mt="auto"
-          c="red"
-          onClick={handleLogout}
-        />
-      </AppShell.Navbar>
+        <Divider />
+        <Stack p="xs">
+          <NavLink label="Se déconnecter" c="red" onClick={handleLogout} />
+        </Stack>
+      </Drawer>
 
-      <AppShell.Main bg="var(--epi-bg)" className="epi-dotted">
-        <Outlet />
-      </AppShell.Main>
-    </AppShell>
+      <AppShell header={{ height: 56 }} padding="md">
+        <AppShell.Header
+          bg={colorScheme === "light" ? "var(--epi-blue)" : "var(--epi-panel)"}
+          style={{ borderBottom: colorScheme === "light" ? "none" : "1px solid var(--epi-border)" }}
+        >
+          <Group h="100%" px="md" justify="space-between">
+            <Group>
+              <Burger
+                opened={opened}
+                onClick={toggle}
+                size="sm"
+                color={colorScheme === "light" ? "white" : undefined}
+              />
+              <Text ff="Anton, sans-serif" size="xl" c={colorScheme === "light" ? "white" : "epitech.4"}>
+                Espace AER
+              </Text>
+            </Group>
+            <Group gap="sm">
+              <ActionIcon
+                variant="subtle"
+                color={colorScheme === "light" ? "white" : "gray"}
+                onClick={toggleColorScheme}
+                aria-label="Basculer entre mode clair et sombre"
+              >
+                {colorScheme === "dark" ? <IconSun size={18} /> : <IconMoon size={18} />}
+              </ActionIcon>
+              <Text size="sm" c={colorScheme === "light" ? "white" : "dimmed"}>
+                {user?.name}
+              </Text>
+            </Group>
+          </Group>
+        </AppShell.Header>
+
+        <AppShell.Main bg="var(--epi-bg)" className="epi-dotted">
+          <Outlet />
+        </AppShell.Main>
+      </AppShell>
+    </>
   );
 }
