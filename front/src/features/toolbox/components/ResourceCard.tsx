@@ -1,6 +1,7 @@
 import { Paper, Group, Text, ActionIcon, Anchor, Stack } from "@mantine/core";
 import {
   IconTrash,
+  IconPencil,
   IconLink,
   IconBrandDiscord,
   IconFileText,
@@ -29,10 +30,11 @@ function formatSize(bytes: number): string {
 
 interface Props {
   resource: Resource;
+  onEdit: () => void;
   onDelete: () => void;
 }
 
-export function ResourceCard({ resource, onDelete }: Props) {
+export function ResourceCard({ resource, onEdit, onDelete }: Props) {
   const isFile = resource.fileName !== null;
   const meta = isFile
     ? { icon: <IconFileTypePdf size={16} />, color: "red" }
@@ -69,16 +71,26 @@ export function ResourceCard({ resource, onDelete }: Props) {
             </Text>
           </Stack>
         </Group>
-        <ActionIcon
-          variant="subtle"
-          color="red"
-          size="sm"
-          onClick={onDelete}
-          aria-label="Supprimer"
-          style={{ flexShrink: 0 }}
-        >
-          <IconTrash size={14} />
-        </ActionIcon>
+        <Group gap={2} wrap="nowrap" style={{ flexShrink: 0 }}>
+          <ActionIcon
+            variant="subtle"
+            color="gray"
+            size="sm"
+            onClick={onEdit}
+            aria-label="Modifier"
+          >
+            <IconPencil size={14} />
+          </ActionIcon>
+          <ActionIcon
+            variant="subtle"
+            color="red"
+            size="sm"
+            onClick={onDelete}
+            aria-label="Supprimer"
+          >
+            <IconTrash size={14} />
+          </ActionIcon>
+        </Group>
       </Group>
     </Paper>
   );
