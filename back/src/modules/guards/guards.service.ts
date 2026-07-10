@@ -80,8 +80,6 @@ export const guardsService = {
     }> = [];
 
     for (const key of dateRange(`${year}-01-01`, `${year}-12-31`)) {
-      const dow = new Date(`${key}T12:00:00Z`).getUTCDay();
-      if (dow === 0) continue; // skip Sunday
       guards.push({
         date: new Date(`${key}T00:00:00.000Z`),
         isPublicHoliday: key in publicHolidays,

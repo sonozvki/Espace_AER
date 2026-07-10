@@ -1,7 +1,7 @@
 import { Elysia, t } from "elysia";
 import { z } from "zod";
 import { resourcesService } from "./resources.service";
-import { CreateResourceSchema, UploadResourceSchema, MAX_FILE_SIZE, PDF_MIME } from "./resources.schemas";
+import { CreateResourceSchema, UploadResourceSchema, UpdateResourceSchema, MAX_FILE_SIZE, PDF_MIME } from "./resources.schemas";
 import { verifySession, COOKIE } from "@/auth/session";
 import { httpStatus } from "@/lib/http";
 
@@ -60,6 +60,29 @@ export const resourcesController = new Elysia({ prefix: "/resources" })
       });
     },
     { params: t.Object({ id: t.String() }) }
+  )
+  .patch(
+    "/:id",
+    async ({ params, body }) => {
+      const parsed = UpdateResourceSchema.safeParse(body);
+      if (!parsed.success) return httpStatus(400, { error: z.flattenError(parsed.error) });
+      return resourcesService.updateResource(Number(params.id), parsed.data);
+    },
+    { params: t.Object({ id: t.String() }), body: t.Any() }
+  )
+  .patch(
+    "/:id/file",
+    async ({ params, body }) => {
+      const { file } = body;
+      if (file.type !== PDF_MIME || !file.name.toLowerCase().endsWith(".pdf"))
+        return httpStatus(400, { error: "Seuls les fichiers PDF sont acceptés" });
+      if (file.size > MAX_FILE_SIZE)
+        return httpStatus(400, { error: "Fichier trop volumineux (10 Mo max)" });
+      const updated = await resourcesService.replaceResourceFile(Number(params.id), file);
+      if (!updated) return httpStatus(404, { error: "Ressource fichier introuvable" });
+      return updated;
+    },
+    { params: t.Object({ id: t.String() }), body: t.Object({ file: t.File() }) }
   )
   .delete(
     "/:id",

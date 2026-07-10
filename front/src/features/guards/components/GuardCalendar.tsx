@@ -3,12 +3,12 @@ import type { Guard } from "../types";
 import type { User } from "@/features/shared/types";
 import { useAssignGuard, useAddAbsent, useRemoveAbsent, useAddUnavailable, useRemoveUnavailable } from "../hooks";
 
-const DAY_HEADERS = ["Lun", "Mar", "Mer", "Jeu", "Ven", "Sam"];
+const DAY_HEADERS = ["Lun", "Mar", "Mer", "Jeu", "Ven", "Sam", "Dim"];
 
-// Mon→0, Tue→1, Wed→2, Thu→3, Fri→4, Sat→5, Sun→skip
+// Mon→0, Tue→1, Wed→2, Thu→3, Fri→4, Sat→5, Sun→6
 function colIndex(date: Date): number {
   const dow = date.getUTCDay();
-  return dow === 0 ? -1 : dow - 1;
+  return dow === 0 ? 6 : dow - 1;
 }
 
 function buildWeeks(year: number, month: number): (Date | null)[][] {
@@ -17,29 +17,19 @@ function buildWeeks(year: number, month: number): (Date | null)[][] {
   const weeks: (Date | null)[][] = [];
   let week: (Date | null)[] = [];
 
-  const firstCol = colIndex(firstDay);
-  const adjustedFirst = firstCol === -1 ? 5 : firstCol;
-  for (let i = 0; i < adjustedFirst; i++) week.push(null);
+  for (let i = 0; i < colIndex(firstDay); i++) week.push(null);
 
   const d = new Date(firstDay);
   while (d <= lastDay) {
-    const col = colIndex(d);
-    if (col === -1) {
-      while (week.length < 6) week.push(null);
-      if (week.some((c) => c !== null)) weeks.push(week);
-      week = [];
-      d.setUTCDate(d.getUTCDate() + 1);
-      continue;
-    }
     week.push(new Date(d));
-    if (col === 5) {
+    if (colIndex(d) === 6) {
       weeks.push(week);
       week = [];
     }
     d.setUTCDate(d.getUTCDate() + 1);
   }
   if (week.length > 0) {
-    while (week.length < 6) week.push(null);
+    while (week.length < 7) week.push(null);
     weeks.push(week);
   }
   return weeks;
@@ -179,7 +169,7 @@ function DayCell({ day, guard, currentUser }: DayCellProps) {
                   Prendre
                 </Button>
               )}
-              {isMyGuard && guard.guardAer && (
+              {guard.guardAer && (
                 <Button
                   size="xs"
                   variant="filled"
@@ -289,7 +279,7 @@ export function GuardCalendar({
   return (
     <Box>
       {/* Desktop: full month, 6 columns */}
-      <SimpleGrid cols={{ base: 2, sm: 6 }} spacing={8} mb={8}>
+      <SimpleGrid cols={{ base: 2, sm: 7 }} spacing={8} mb={8}>
         {DAY_HEADERS.map((h) => (
           <Text key={h} size="sm" fw={600} c="dimmed" ta="center" py={4}>
             {h}
@@ -299,7 +289,7 @@ export function GuardCalendar({
 
       <Stack gap={8}>
         {weeks.map((week, wi) => (
-          <SimpleGrid key={wi} cols={{ base: 2, sm: 6 }} spacing={8}>
+          <SimpleGrid key={wi} cols={{ base: 2, sm: 7 }} spacing={8}>
             {week.map((day, di) =>
               day ? (
                 <DayCell

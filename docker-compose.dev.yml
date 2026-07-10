@@ -1,13 +1,13 @@
 # Environnement de développement local
 # Usage : docker compose -f docker-compose.dev.yml up --build
 #
-# La DB est exposée sur localhost:5433 pour Prisma Studio (bunx prisma studio).
+# La DB est exposée sur localhost:5434 pour Prisma Studio (bunx prisma studio).
 # Le backend tourne avec --hot (rechargement à chaud).
 # Les sources src/ et prisma/ sont montées en volume pour refléter
 # les changements du host sans rebuild.
 #
 # Migrations : relancer le container backend après chaque `bunx prisma migrate dev`
-# exécuté depuis le host (il faut pointer DATABASE_URL vers 127.0.0.1:5433).
+# exécuté depuis le host (il faut pointer DATABASE_URL vers 127.0.0.1:5434).
 
 services:
   db:
@@ -18,7 +18,7 @@ services:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
     ports:
-      - "5433:5432"
+      - "5434:5432"
     volumes:
       - db-dev:/var/lib/postgresql/data
     healthcheck:
@@ -35,18 +35,18 @@ services:
     container_name: aer-backend
     command: sh -c "bunx prisma generate && bunx prisma migrate deploy && bun --hot src/server.ts"
     ports:
-      - "8081:8081"
+      - "8082:8082"
     env_file:
       - ./back/.env            # charge MICROSOFT_CLIENT_ID/SECRET/TENANT_ID
     environment:
       # Ces valeurs surchargent celles du .env pour Docker
       NODE_ENV: development
       DATABASE_URL: postgresql://postgres:postgres@db:5432/aer_dev
-      PORT: 8081
+      PORT: 8082
       JWT_SECRET: dev_jwt_secret_change_in_prod
       ENCRYPTION_KEY: dev_encryption_key_32_chars_min_!!
-      FRONTEND_URL: ${FRONTEND_URL:-http://localhost:5173}
-      MICROSOFT_REDIRECT_URI: ${MICROSOFT_REDIRECT_URI:-http://localhost:8081/auth/callback}
+      FRONTEND_URL: ${FRONTEND_URL:-http://localhost:5174}
+      MICROSOFT_REDIRECT_URI: ${MICROSOFT_REDIRECT_URI:-http://localhost:8082/auth/callback}
       # WHITELIST_ADMINS et WHITELIST_AERS chargés depuis back/.env via env_file
     volumes:
       - ./back/src:/app/src
@@ -65,9 +65,9 @@ services:
       target: dev
     container_name: aer-frontend
     ports:
-      - "5173:5173"
+      - "5174:5173"
     environment:
-      - VITE_API_URL=${VITE_API_URL:-http://localhost:8081}
+      - VITE_API_URL=${VITE_API_URL:-http://localhost:8082}
     volumes:
       - ./front/src:/app/src
     depends_on:

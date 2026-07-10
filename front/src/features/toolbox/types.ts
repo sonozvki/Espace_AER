@@ -25,6 +25,14 @@ export type UploadResourceInput = {
   file: File;
 };
 
+// Métadonnées uniquement — le fichier PDF d'une ressource n'est pas remplaçable
+export type UpdateResourceInput = {
+  title: string;
+  url?: string;
+  description: string;
+  category: string;
+};
+
 export const CATEGORIES = [
   "Intra Epitech",
   "Discord",
