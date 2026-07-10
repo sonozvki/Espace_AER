@@ -1,0 +1,7 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(psql postgresql://postgres:postgres@localhost:5434/aer_dev -c \"\\\\dt\")"
+    ]
+  }
+}

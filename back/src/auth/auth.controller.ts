@@ -1,4 +1,4 @@
-import { Elysia, t, redirect } from "elysia";
+import { Elysia, t } from "elysia";
 import { getAuthorizationUrl, handleCallback } from "@/auth/auth.service";
 import { createSession, verifySession, sessionCookieOptions, COOKIE } from "@/auth/session";
 import { prisma } from "@/db/prisma";
@@ -24,7 +24,7 @@ async function getSession(cookie: Record<string, { value?: unknown }>) {
 }
 
 export const authController = new Elysia({ prefix: "/auth" })
-  .get("/login", async ({ cookie }) => {
+  .get("/login", async ({ cookie, redirect }) => {
     // Dev mode: no Microsoft credentials → auto-login as ADMIN
     if (!process.env["MICROSOFT_CLIENT_ID"]) {
       const devUser = await prisma.user.upsert({
@@ -45,7 +45,7 @@ export const authController = new Elysia({ prefix: "/auth" })
 
   .get(
     "/callback",
-    async ({ query, cookie }) => {
+    async ({ query, cookie, redirect }) => {
       if (query.error) {
         return redirect(`${FRONTEND}/login?error=${encodeURIComponent(String(query.error))}`);
       }
