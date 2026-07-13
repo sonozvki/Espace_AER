@@ -1,7 +1,8 @@
-import { Modal, TextInput, Button, Group, Text, Loader, Center, Stack, SegmentedControl } from "@mantine/core";
+import { Modal, TextInput, Button, Group, Text, Loader, Center, Stack, SegmentedControl, useComputedColorScheme } from "@mantine/core";
 import { useState, useEffect } from "react";
 import { useMediaQuery } from "@mantine/hooks";
 import MDEditor from "@uiw/react-md-editor";
+import remarkBreaks from "remark-breaks";
 import { useMemo, useCreateMemo, useUpdateMemo } from "../hooks";
 
 // autre template
@@ -56,6 +57,7 @@ export function MemoEditorModal({ opened, onClose, memoId }: Props) {
   const createMemo = useCreateMemo();
   const updateMemo = useUpdateMemo();
   const isMobile = !useMediaQuery("(min-width: 768px)");
+  const colorScheme = useComputedColorScheme("dark");
 
   const [title, setTitle] = useState(todayTitle());
   const [content, setContent] = useState(DEFAULT_TEMPLATE);
@@ -138,7 +140,7 @@ export function MemoEditorModal({ opened, onClose, memoId }: Props) {
             </Text>
           )}
 
-          <div data-color-mode="dark" style={{ flex: 1, overflow: "hidden" }}>
+          <div data-color-mode={colorScheme} style={{ flex: 1, overflow: "hidden" }}>
             <MDEditor
               value={content}
               onChange={(v) => setContent(v ?? "")}
@@ -146,6 +148,10 @@ export function MemoEditorModal({ opened, onClose, memoId }: Props) {
               height="100%"
               style={{ height: "100%" }}
               visibleDragbar={isMobile ? false : true}
+              previewOptions={{
+                // rend les retours à la ligne simples comme <br> (comportement type chat)
+                remarkPlugins: [remarkBreaks],
+              }}
             />
           </div>
 
