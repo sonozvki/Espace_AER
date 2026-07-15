@@ -39,11 +39,15 @@ export type IntraStudent = {
 
 export type IntraModuleNote = {
   codemodule: string;
+  codeinstance: string | null;
   title: string;
   grade: string | null;
   credits: number | null;
   note: number | null;
   scolaryear: number | null;
+  semester: number | null;
+  cycle: string | null;
+  begin: string | null;
 };
 
 export type IntraActivityNote = {
@@ -203,14 +207,29 @@ export async function getStudentNotes(userId: number, login: string): Promise<In
     `/user/${encodeURIComponent(login)}/notes?format=json`
   );
 
-  const modules = ((raw["modules"] ?? []) as Record<string, unknown>[]).map((m) => ({
-    codemodule: String(m["codemodule"] ?? ""),
-    title: String(m["title"] ?? ""),
-    grade: m["grade"] != null ? String(m["grade"]) : null,
-    credits: typeof m["credits"] === "number" ? m["credits"] : null,
-    note: m["note"] != null ? Number(m["note"]) : null,
-    scolaryear: typeof m["scolaryear"] === "number" ? m["scolaryear"] : null,
-  }));
+  const modules = ((raw["modules"] ?? []) as Record<string, unknown>[]).map((m) => {
+    // Dériver le semestre depuis codeinstance (format NCE-0-1 → 1)
+    const codeinstance = m["codeinstance"] != null ? String(m["codeinstance"]) : null;
+    const semesterFromInstance = codeinstance
+      ? Number(codeinstance.split("-").at(-1))
+      : null;
+    const semester = typeof m["semester"] === "number"
+      ? m["semester"]
+      : (semesterFromInstance !== null && !Number.isNaN(semesterFromInstance) ? semesterFromInstance : null);
+
+    return {
+      codemodule: String(m["codemodule"] ?? ""),
+      codeinstance,
+      title: String(m["title"] ?? ""),
+      grade: m["grade"] != null ? String(m["grade"]) : null,
+      credits: m["credits"] != null ? Number(m["credits"]) : null,
+      note: m["note"] != null ? Number(m["note"]) : null,
+      scolaryear: typeof m["scolaryear"] === "number" ? m["scolaryear"] : null,
+      semester,
+      cycle: m["cycle"] != null ? String(m["cycle"]) : null,
+      begin: m["begin"] != null ? String(m["begin"]) : null,
+    };
+  });
 
   const activities = ((raw["notes"] ?? []) as Record<string, unknown>[]).map((n) => ({
     title: String(n["title"] ?? ""),

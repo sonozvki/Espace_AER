@@ -1,12 +1,65 @@
 import {
   Stack, Title, Text, Badge, Table, Group, ActionIcon, Loader, Center,
-  Paper, SimpleGrid, Divider,
+  Paper, SimpleGrid, SegmentedControl, UnstyledButton, rem,
 } from "@mantine/core";
-import { IconArrowLeft } from "@tabler/icons-react";
+import { IconArrowLeft, IconChevronUp, IconChevronDown, IconSelector } from "@tabler/icons-react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useStudentNotes } from "@/features/suivi/hooks";
 import { useEffect, useState } from "react";
-import type { IntraStudent } from "@/features/suivi/api";
+import type { IntraStudent, IntraModuleNote } from "@/features/suivi/api";
+
+// Ordre des grades pour le tri
+const GRADE_ORDER: Record<string, number> = { A: 0, B: 1, C: 2, D: 3, Acquis: 4, "-": 5, Echec: 6 };
+function gradeRank(g: string | null) {
+  if (g === null) return 99;
+  return GRADE_ORDER[g] ?? 50;
+}
+
+type SortKey = "title" | "grade" | "credits" | "note" | "scolaryear" | "begin";
+type SortDir = "asc" | "desc";
+
+function sortModules(rows: IntraModuleNote[], key: SortKey, dir: SortDir) {
+  return [...rows].sort((a, b) => {
+    let cmp = 0;
+    if (key === "grade") {
+      cmp = gradeRank(a.grade) - gradeRank(b.grade);
+    } else if (key === "title") {
+      cmp = (a.title ?? "").localeCompare(b.title ?? "");
+    } else if (key === "begin") {
+      cmp = (a.begin ?? "").localeCompare(b.begin ?? "");
+    } else {
+      const av = a[key] as number | null;
+      const bv = b[key] as number | null;
+      if (av === null && bv === null) cmp = 0;
+      else if (av === null) cmp = 1;
+      else if (bv === null) cmp = -1;
+      else cmp = av - bv;
+    }
+    return dir === "asc" ? cmp : -cmp;
+  });
+}
+
+function SortTh({ children, sortKey, active, dir, onSort }: {
+  children: React.ReactNode;
+  sortKey: SortKey;
+  active: SortKey;
+  dir: SortDir;
+  onSort: (k: SortKey) => void;
+}) {
+  const isActive = active === sortKey;
+  const Icon = isActive ? (dir === "asc" ? IconChevronUp : IconChevronDown) : IconSelector;
+  return (
+    <Table.Th>
+      <UnstyledButton
+        onClick={() => onSort(sortKey)}
+        style={{ display: "flex", alignItems: "center", gap: rem(4), width: "100%", userSelect: "none" }}
+      >
+        <Text size="sm" fw={600}>{children}</Text>
+        <Icon size={14} style={{ opacity: isActive ? 1 : 0.4 }} />
+      </UnstyledButton>
+    </Table.Th>
+  );
+}
 
 function StatCard({ label, value }: { label: string; value: string | number | null }) {
   return (
@@ -17,24 +70,56 @@ function StatCard({ label, value }: { label: string; value: string | number | nu
   );
 }
 
+function formatDate(d: string | null) {
+  if (!d) return "—";
+  const date = new Date(d);
+  return date.toLocaleDateString("fr-FR", { day: "numeric", month: "short", year: "numeric" });
+}
+
 export function StudentNotesPage() {
   const { login } = useParams<{ login: string }>();
   const navigate = useNavigate();
   const decodedLogin = decodeURIComponent(login ?? "");
 
   const { data: notes, isLoading } = useStudentNotes(decodedLogin || null);
-
-  // Récupère les infos de base (GPA, crédits) depuis le cache ou l'API
-  // On réutilise le hook students en passant par sessionStorage pour éviter un 2ème appel
   const [student, setStudent] = useState<IntraStudent | null>(null);
+  const [semFilter, setSemFilter] = useState("all");
+  const [sortKey, setSortKey] = useState<SortKey>("begin");
+  const [sortDir, setSortDir] = useState<SortDir>("asc");
+
   useEffect(() => {
     const cached = sessionStorage.getItem(`student:${decodedLogin}`);
     if (cached) setStudent(JSON.parse(cached) as IntraStudent);
   }, [decodedLogin]);
 
-  const name = student
-    ? `${student.firstName} ${student.lastName}`
-    : decodedLogin;
+  function handleSort(key: SortKey) {
+    if (key === sortKey) setSortDir((d) => (d === "asc" ? "desc" : "asc"));
+    else { setSortKey(key); setSortDir("asc"); }
+  }
+
+  const name = student ? `${student.firstName} ${student.lastName}` : decodedLogin;
+
+  // Semestres disponibles
+  const semesters = notes
+    ? [...new Set(notes.modules.map((m) => m.semester).filter((s): s is number => s !== null))].sort()
+    : [];
+
+  const semOptions = [
+    { label: "Tous", value: "all" },
+    ...semesters.map((s) => ({ label: `Semestre ${s}`, value: String(s) })),
+  ];
+
+  const filteredModules = notes?.modules.filter(
+    (m) => semFilter === "all" || String(m.semester) === semFilter
+  ) ?? [];
+
+  const sorted = sortModules(filteredModules, sortKey, sortDir);
+
+  // Totaux pour le semestre sélectionné
+  const totalCredits = filteredModules.reduce((acc, m) => acc + (m.credits ?? 0), 0);
+  const acquiredCredits = filteredModules
+    .filter((m) => m.grade && m.grade !== "-" && m.grade !== "Echec")
+    .reduce((acc, m) => acc + (m.credits ?? 0), 0);
 
   return (
     <Stack gap="xl">
@@ -51,79 +136,69 @@ export function StudentNotesPage() {
       {student && (
         <SimpleGrid cols={{ base: 2, sm: 4 }}>
           <StatCard label="GPA" value={student.gpa !== null ? student.gpa.toFixed(2) : null} />
-          <StatCard label="Crédits" value={student.credits} />
-          <StatCard label="Semestre" value={student.semester !== null ? `S${student.semester}` : null} />
+          <StatCard label="Crédits totaux" value={student.credits} />
+          <StatCard label="Semestre actuel" value={student.semester !== null ? `S${student.semester}` : null} />
         </SimpleGrid>
       )}
 
       {isLoading && <Center py="xl"><Loader /></Center>}
 
       {notes && !isLoading && (
-        <Stack gap="xl">
-          {notes.modules.length > 0 && (
-            <Stack gap="sm">
-              <Title order={4}>Modules</Title>
+        <Stack gap="md">
+          {semOptions.length > 1 && (
+            <SegmentedControl
+              value={semFilter}
+              onChange={setSemFilter}
+              data={semOptions}
+              w="fit-content"
+            />
+          )}
+
+          {sorted.length > 0 ? (
+            <>
+              <Text size="sm" c="dimmed">
+                {acquiredCredits} crédits acquis sur {totalCredits}
+              </Text>
               <Table withTableBorder withColumnBorders striped highlightOnHover>
                 <Table.Thead>
                   <Table.Tr>
-                    <Table.Th>Module</Table.Th>
-                    <Table.Th>Année</Table.Th>
-                    <Table.Th>Note</Table.Th>
-                    <Table.Th>Grade</Table.Th>
-                    <Table.Th>Crédits</Table.Th>
+                    <SortTh sortKey="title" active={sortKey} dir={sortDir} onSort={handleSort}>Titre</SortTh>
+                    <SortTh sortKey="begin" active={sortKey} dir={sortDir} onSort={handleSort}>Date</SortTh>
+                    <SortTh sortKey="grade" active={sortKey} dir={sortDir} onSort={handleSort}>Grade</SortTh>
+                    <SortTh sortKey="note" active={sortKey} dir={sortDir} onSort={handleSort}>Note</SortTh>
+                    <SortTh sortKey="credits" active={sortKey} dir={sortDir} onSort={handleSort}>Crédits</SortTh>
+                    <SortTh sortKey="scolaryear" active={sortKey} dir={sortDir} onSort={handleSort}>Année</SortTh>
+                    <Table.Th>Code module</Table.Th>
+                    <Table.Th>Cycle</Table.Th>
                   </Table.Tr>
                 </Table.Thead>
                 <Table.Tbody>
-                  {notes.modules.map((m) => (
-                    <Table.Tr key={`${m.codemodule}-${m.scolaryear}`}>
+                  {sorted.map((m) => (
+                    <Table.Tr key={`${m.codemodule}-${m.scolaryear}-${m.codeinstance}`}>
+                      <Table.Td><Text size="sm">{m.title}</Text></Table.Td>
+                      <Table.Td><Text size="sm">{formatDate(m.begin)}</Text></Table.Td>
                       <Table.Td>
-                        <Text size="sm" fw={500}>{m.title}</Text>
-                        <Text size="xs" c="dimmed" ff="monospace">{m.codemodule}</Text>
+                        {m.grade
+                          ? <Badge variant="light" size="sm"
+                              color={m.grade === "Echec" ? "red" : m.grade === "-" ? "gray" : "blue"}>
+                              {m.grade}
+                            </Badge>
+                          : <Text size="sm" c="dimmed">—</Text>}
                       </Table.Td>
-                      <Table.Td><Text size="sm">{m.scolaryear ?? "—"}</Text></Table.Td>
                       <Table.Td>
                         <Text size="sm">{m.note !== null ? m.note.toFixed(2) : "—"}</Text>
                       </Table.Td>
-                      <Table.Td>
-                        {m.grade
-                          ? <Badge variant="light" size="sm">{m.grade}</Badge>
-                          : <Text size="sm" c="dimmed">—</Text>}
-                      </Table.Td>
                       <Table.Td><Text size="sm">{m.credits ?? "—"}</Text></Table.Td>
+                      <Table.Td><Text size="sm">{m.scolaryear ?? "—"}</Text></Table.Td>
+                      <Table.Td><Text size="sm" ff="monospace" c="dimmed">{m.codemodule}</Text></Table.Td>
+                      <Table.Td><Text size="sm" c="dimmed">{m.cycle ?? "—"}</Text></Table.Td>
                     </Table.Tr>
                   ))}
                 </Table.Tbody>
               </Table>
-            </Stack>
-          )}
-
-          {notes.activities.length > 0 && (
-            <Stack gap="sm">
-              <Divider />
-              <Title order={4}>Activités notées</Title>
-              <Table withTableBorder withColumnBorders striped highlightOnHover>
-                <Table.Thead>
-                  <Table.Tr>
-                    <Table.Th>Activité</Table.Th>
-                    <Table.Th>Note</Table.Th>
-                    <Table.Th>Commentaire</Table.Th>
-                  </Table.Tr>
-                </Table.Thead>
-                <Table.Tbody>
-                  {notes.activities.map((a, i) => (
-                    <Table.Tr key={i}>
-                      <Table.Td><Text size="sm">{a.title}</Text></Table.Td>
-                      <Table.Td><Text size="sm">{a.note !== null ? a.note.toFixed(2) : "—"}</Text></Table.Td>
-                      <Table.Td><Text size="sm" c="dimmed">{a.comment ?? "—"}</Text></Table.Td>
-                    </Table.Tr>
-                  ))}
-                </Table.Tbody>
-              </Table>
-            </Stack>
-          )}
-
-          {notes.modules.length === 0 && notes.activities.length === 0 && (
-            <Text c="dimmed" ta="center" py="xl">Aucune note disponible pour cet étudiant.</Text>
+            </>
+          ) : (
+            <Text c="dimmed" ta="center" py="xl">Aucun module pour ce filtre.</Text>
           )}
         </Stack>
       )}

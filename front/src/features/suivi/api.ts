@@ -11,11 +11,15 @@ export type IntraStudent = {
 
 export type IntraModuleNote = {
   codemodule: string;
+  codeinstance: string | null;
   title: string;
   grade: string | null;
   credits: number | null;
   note: number | null;
   scolaryear: number | null;
+  semester: number | null;
+  cycle: string | null;
+  begin: string | null;
 };
 
 export type IntraActivityNote = {
