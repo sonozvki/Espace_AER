@@ -3,10 +3,20 @@ import { verifySession, COOKIE } from "@/auth/session";
 import { httpStatus } from "@/lib/http";
 import {
   getMyActivities,
+  getIntraPromos,
+  getIntraStudents,
+  getStudentNotes,
   EpitechTokenMissingError,
   EpitechTokenInvalidError,
   EpitechUpstreamError,
 } from "./epitech.service";
+
+function handleEpitechError(err: unknown) {
+  if (err instanceof EpitechTokenMissingError) return httpStatus(409, { error: "no_token" });
+  if (err instanceof EpitechTokenInvalidError) return httpStatus(502, { error: "token_invalid" });
+  if (err instanceof EpitechUpstreamError) return httpStatus(503, { error: "upstream_error" });
+  throw err;
+}
 
 export const epitechController = new Elysia({ prefix: "/epitech" })
   .derive(async ({ cookie }) => {
@@ -21,19 +31,65 @@ export const epitechController = new Elysia({ prefix: "/epitech" })
       try {
         return await getMyActivities(Number(session.sub), query.start, query.end);
       } catch (err) {
-        if (err instanceof EpitechTokenMissingError)
-          return httpStatus(409, { error: "no_token" });
-        if (err instanceof EpitechTokenInvalidError)
-          return httpStatus(502, { error: "token_invalid" });
-        if (err instanceof EpitechUpstreamError)
-          return httpStatus(503, { error: "upstream_error" });
-        throw err;
+        return handleEpitechError(err);
+      }
+    },
+    {
+      query: t.Object({ start: t.String(), end: t.String() }),
+    }
+  )
+
+  .get(
+    "/intra/promos",
+    async ({ session, query }) => {
+      try {
+        return await getIntraPromos(
+          Number(session.sub),
+          query.location ?? "FR/NCE",
+          query.year ? Number(query.year) : undefined
+        );
+      } catch (err) {
+        return handleEpitechError(err);
       }
     },
     {
       query: t.Object({
-        start: t.String(), // "YYYY-MM-DD"
-        end: t.String(),
+        location: t.Optional(t.String()),
+        year: t.Optional(t.String()),
       }),
     }
+  )
+
+  .get(
+    "/intra/students",
+    async ({ session, query }) => {
+      try {
+        return await getIntraStudents(Number(session.sub), {
+          location: query.location ?? "FR/NCE",
+          year: query.year ? Number(query.year) : undefined,
+          promo: query.promo,
+        });
+      } catch (err) {
+        return handleEpitechError(err);
+      }
+    },
+    {
+      query: t.Object({
+        promo: t.String(),
+        location: t.Optional(t.String()),
+        year: t.Optional(t.String()),
+      }),
+    }
+  )
+
+  .get(
+    "/intra/student/:login/notes",
+    async ({ session, params }) => {
+      try {
+        return await getStudentNotes(Number(session.sub), decodeURIComponent(params.login));
+      } catch (err) {
+        return handleEpitechError(err);
+      }
+    },
+    { params: t.Object({ login: t.String() }) }
   );
