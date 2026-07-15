@@ -48,7 +48,7 @@ export function SettingsPage() {
                 Compte Epitech (cookie intra)
               </Text>
               <Text size="sm" c="dimmed">
-                Permet d'afficher tes activités Epitech à venir sur le tableau de bord.
+                Permet d'afficher tes activités et d'accéder au suivi étudiants.
               </Text>
             </div>
           </Group>
