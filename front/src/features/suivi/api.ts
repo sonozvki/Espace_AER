@@ -7,6 +7,7 @@ export type IntraStudent = {
   semester: number | null;
   gpa: number | null;
   credits: number | null;
+  netsoulHours: number | null;
 };
 
 export type IntraModuleNote = {

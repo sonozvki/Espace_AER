@@ -35,6 +35,7 @@ export type IntraStudent = {
   semester: number | null;
   gpa: number | null;
   credits: number | null;
+  netsoulHours: number | null;
 };
 
 export type IntraModuleNote = {
@@ -66,34 +67,30 @@ export class EpitechTokenMissingError extends Error {}
 export class EpitechTokenInvalidError extends Error {}
 export class EpitechUpstreamError extends Error {}
 
-async function intraCookieFetch<T>(userId: number, path: string): Promise<T> {
-  const user = await prisma.user.findUnique({
-    where: { id: userId },
-    select: { epitechToken: true },
-  });
-  if (!user?.epitechToken) throw new EpitechTokenMissingError();
+const UA = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36";
 
-  const cookie = decrypt(user.epitechToken);
-  console.log(`[intraCookieFetch] cookie len=${cookie.length} starts=${cookie.slice(0, 8)}`);
+async function getUserCookie(userId: number): Promise<string> {
+  const user = await prisma.user.findUnique({ where: { id: userId }, select: { epitechToken: true } });
+  if (!user?.epitechToken) throw new EpitechTokenMissingError();
+  return decrypt(user.epitechToken);
+}
+
+async function fetchIntra<T>(cookie: string, path: string): Promise<T> {
   let res: Response;
   try {
     res = await fetch(`${INTRA_BASE}${path}`, {
-      headers: {
-        Cookie: `user=${cookie}`,
-        "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36",
-      },
+      headers: { Cookie: `user=${cookie}`, "User-Agent": UA },
       redirect: "follow",
     });
   } catch (err) {
-    console.error(`[intraCookieFetch] network error on ${path}:`, err);
+    console.error(`[fetchIntra] network error on ${path}:`, err);
     throw new EpitechUpstreamError();
   }
 
-  console.log(`[intraCookieFetch] ${res.status} on ${path}`);
   if (res.status === 401 || res.status === 403) throw new EpitechTokenInvalidError();
   if (!res.ok) {
     const body = await res.text().catch(() => "");
-    console.error(`[intraCookieFetch] upstream error ${res.status} on ${path}: ${body.slice(0, 200)}`);
+    console.error(`[fetchIntra] ${res.status} on ${path}: ${body.slice(0, 200)}`);
     throw new EpitechUpstreamError();
   }
 
@@ -103,6 +100,11 @@ async function intraCookieFetch<T>(userId: number, path: string): Promise<T> {
   } catch {
     throw new EpitechTokenInvalidError();
   }
+}
+
+async function intraCookieFetch<T>(userId: number, path: string): Promise<T> {
+  const cookie = await getUserCookie(userId);
+  return fetchIntra<T>(cookie, path);
 }
 
 function schoolYear() {
@@ -118,7 +120,6 @@ export async function getIntraPromos(
 ): Promise<string[]> {
   const path = `/user/filter/promo?format=json&location=${location}&year=${year ?? schoolYear()}&active=true`;
   const data = await intraCookieFetch<unknown>(userId, path);
-  console.log("[getIntraPromos] raw:", JSON.stringify(data).slice(0, 300));
   if (!Array.isArray(data)) return [];
   return data.map((d) => (typeof d === "string" ? d : String((d as Record<string, unknown>)["promo"] ?? (d as Record<string, unknown>)["code"] ?? d)));
 }
@@ -130,22 +131,28 @@ export async function getIntraStudents(
   // Ne pas encoder les slashes (location FR/NCE, promo bachelor/classic)
   const path = `/user/filter/user?format=json&location=${params.location}&year=${params.year ?? schoolYear()}&active=true&promo=${params.promo}&offset=0`;
 
-  const list = await intraCookieFetch<{ items?: Record<string, unknown>[]; total?: number }>(userId, path);
-  console.log("[getIntraStudents] total:", list.total, "items:", list.items?.length ?? 0, "keys:", Object.keys(list));
+  // Un seul fetch de cookie pour tous les appels parallèles
+  const cookie = await getUserCookie(userId);
+  const list = await fetchIntra<{ items?: Record<string, unknown>[]; total?: number }>(cookie, path);
   const students = list.items ?? [];
 
   const enriched = await Promise.all(
     students.map(async (s) => {
       const login = String(s["login"] ?? "");
       try {
-        const profile = await intraCookieFetch<Record<string, unknown>>(
-          userId,
-          `/user/${encodeURIComponent(login)}/?format=json`
-        );
-        const gpaArr = Array.isArray(profile["gpa"])
-          ? (profile["gpa"] as { gpa: string }[])
-          : [];
+        const [profile, netsoul] = await Promise.all([
+          fetchIntra<Record<string, unknown>>(cookie, `/user/${encodeURIComponent(login)}/?format=json`),
+          fetchIntra<number[][]>(cookie, `/user/${encodeURIComponent(login)}/netsoul?format=json`).catch(() => null),
+        ]);
+
+        const gpaArr = Array.isArray(profile["gpa"]) ? (profile["gpa"] as { gpa: string }[]) : [];
         const gpaRaw = gpaArr[0]?.gpa ? Number(gpaArr[0].gpa) : null;
+
+        // Netsoul : somme des secondes actives (index 1), divisée par 3600
+        const netsoulSecs = netsoul
+          ? netsoul.reduce((acc, row) => acc + (row[1] && row[1] > 0 ? row[1] : 0), 0)
+          : null;
+
         return {
           login,
           firstName: String(profile["firstname"] ?? s["prenom"] ?? ""),
@@ -153,6 +160,7 @@ export async function getIntraStudents(
           semester: typeof profile["semester"] === "number" ? profile["semester"] : null,
           gpa: gpaRaw !== null && !Number.isNaN(gpaRaw) ? gpaRaw : null,
           credits: typeof profile["credits"] === "number" ? profile["credits"] : null,
+          netsoulHours: netsoulSecs !== null ? Math.round(netsoulSecs / 3600) : null,
         };
       } catch {
         return {
@@ -162,6 +170,7 @@ export async function getIntraStudents(
           semester: null,
           gpa: null,
           credits: null,
+          netsoulHours: null,
         };
       }
     })

@@ -1,26 +1,62 @@
 import {
   Stack, Title, Select, Group, Table, Text, Badge, Loader, Center, Anchor, Alert,
+  UnstyledButton, rem,
 } from "@mantine/core";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { IconAlertCircle } from "@tabler/icons-react";
+import { IconAlertCircle, IconChevronUp, IconChevronDown, IconSelector } from "@tabler/icons-react";
 import { useIntraPromos, useIntraStudents } from "@/features/suivi/hooks";
 import { useAuth } from "@/hooks/useAuth";
 import type { IntraStudent } from "@/features/suivi/api";
 
-function sortStudents(rows: IntraStudent[]) {
+type SortKey = "lastName" | "gpa" | "credits" | "semester" | "netsoulHours";
+type SortDir = "asc" | "desc";
+
+function sortStudents(rows: IntraStudent[], key: SortKey, dir: SortDir) {
   return [...rows].sort((a, b) => {
-    if (a.gpa !== null && b.gpa !== null) return b.gpa - a.gpa;
-    if (a.gpa !== null) return -1;
-    if (b.gpa !== null) return 1;
-    return a.lastName.localeCompare(b.lastName);
+    let cmp = 0;
+    if (key === "lastName") {
+      cmp = a.lastName.localeCompare(b.lastName);
+    } else {
+      const av = a[key] as number | null;
+      const bv = b[key] as number | null;
+      if (av === null && bv === null) cmp = 0;
+      else if (av === null) cmp = 1;
+      else if (bv === null) cmp = -1;
+      else cmp = av - bv;
+    }
+    return dir === "asc" ? cmp : -cmp;
   });
+}
+
+function SortTh({ children, sortKey, active, dir, onSort }: {
+  children: React.ReactNode;
+  sortKey: SortKey;
+  active: SortKey;
+  dir: SortDir;
+  onSort: (k: SortKey) => void;
+}) {
+  const isActive = active === sortKey;
+  const Icon = isActive ? (dir === "asc" ? IconChevronUp : IconChevronDown) : IconSelector;
+  return (
+    <Table.Th>
+      <UnstyledButton
+        onClick={() => onSort(sortKey)}
+        style={{ display: "flex", alignItems: "center", gap: rem(4), userSelect: "none" }}
+      >
+        <Text size="sm" fw={600}>{children}</Text>
+        <Icon size={14} style={{ opacity: isActive ? 1 : 0.4 }} />
+      </UnstyledButton>
+    </Table.Th>
+  );
 }
 
 export function SuiviPage() {
   const { user } = useAuth();
   const navigate = useNavigate();
   const [promo, setPromo] = useState<string | null>(null);
+  const [sortKey, setSortKey] = useState<SortKey>("gpa");
+  const [sortDir, setSortDir] = useState<SortDir>("desc");
 
   const { data: promos, isLoading: loadingPromos, error: promosError } = useIntraPromos();
   const { data: students, isLoading: loadingStudents, error: studentsError } = useIntraStudents(promo);
@@ -57,12 +93,18 @@ export function SuiviPage() {
     );
   }
 
+  function handleSort(key: SortKey) {
+    if (key === sortKey) setSortDir((d) => (d === "asc" ? "desc" : "asc"));
+    else { setSortKey(key); setSortDir(key === "lastName" ? "asc" : "desc"); }
+  }
+
   function handleRowClick(s: IntraStudent) {
     sessionStorage.setItem(`student:${s.login}`, JSON.stringify(s));
     navigate(`/suivi/${encodeURIComponent(s.login)}`);
   }
 
   const promoOptions = (promos ?? []).map((p) => ({ value: p, label: p }));
+  const sorted = students ? sortStudents(students, sortKey, sortDir) : [];
 
   return (
     <Stack gap="xl">
@@ -87,26 +129,34 @@ export function SuiviPage() {
         )}
       </Group>
 
-      {loadingStudents && <Center py="xl"><Loader /></Center>}
+      {loadingStudents && (
+        <Center py="xl">
+          <Stack align="center" gap="sm">
+            <Loader />
+            <Text size="sm" c="dimmed">Chargement des profils…</Text>
+          </Stack>
+        </Center>
+      )}
 
-      {students && !loadingStudents && (
-        <Table striped highlightOnHover withTableBorder withColumnBorders style={{ cursor: "pointer" }}>
+      {sorted.length > 0 && !loadingStudents && (
+        <Table withTableBorder withColumnBorders striped highlightOnHover style={{ cursor: "pointer" }}>
           <Table.Thead>
             <Table.Tr>
-              <Table.Th>Login</Table.Th>
-              <Table.Th>Nom</Table.Th>
+              <SortTh sortKey="lastName" active={sortKey} dir={sortDir} onSort={handleSort}>Nom</SortTh>
               <Table.Th>Prénom</Table.Th>
-              <Table.Th>GPA</Table.Th>
-              <Table.Th>Crédits</Table.Th>
-              <Table.Th>Semestre</Table.Th>
+              <Table.Th>Login</Table.Th>
+              <SortTh sortKey="gpa" active={sortKey} dir={sortDir} onSort={handleSort}>GPA</SortTh>
+              <SortTh sortKey="credits" active={sortKey} dir={sortDir} onSort={handleSort}>Crédits</SortTh>
+              <SortTh sortKey="semester" active={sortKey} dir={sortDir} onSort={handleSort}>Semestre</SortTh>
+              <SortTh sortKey="netsoulHours" active={sortKey} dir={sortDir} onSort={handleSort}>Netsoul (h)</SortTh>
             </Table.Tr>
           </Table.Thead>
           <Table.Tbody>
-            {sortStudents(students).map((s) => (
+            {sorted.map((s) => (
               <Table.Tr key={s.login} onClick={() => handleRowClick(s)}>
-                <Table.Td><Text size="sm" ff="monospace">{s.login}</Text></Table.Td>
-                <Table.Td><Text size="sm">{s.lastName}</Text></Table.Td>
+                <Table.Td><Text size="sm" fw={500}>{s.lastName}</Text></Table.Td>
                 <Table.Td><Text size="sm">{s.firstName}</Text></Table.Td>
+                <Table.Td><Text size="sm" ff="monospace" c="dimmed">{s.login}</Text></Table.Td>
                 <Table.Td>
                   <Text size="sm">{s.gpa !== null ? s.gpa.toFixed(2) : <Text span c="dimmed">—</Text>}</Text>
                 </Table.Td>
@@ -116,6 +166,11 @@ export function SuiviPage() {
                 <Table.Td>
                   {s.semester !== null
                     ? <Badge variant="outline" size="sm">S{s.semester}</Badge>
+                    : <Text size="sm" c="dimmed">—</Text>}
+                </Table.Td>
+                <Table.Td>
+                  {s.netsoulHours !== null
+                    ? <Text size="sm">{s.netsoulHours}h</Text>
                     : <Text size="sm" c="dimmed">—</Text>}
                 </Table.Td>
               </Table.Tr>
