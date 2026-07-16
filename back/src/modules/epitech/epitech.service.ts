@@ -181,6 +181,34 @@ export async function getIntraStudents(
   return enriched;
 }
 
+export async function getStudentsFromCache(promo: string, location: string): Promise<IntraStudent[]> {
+  const rows = await prisma.studentCache.findMany({
+    where: { promo, location },
+    orderBy: { lastName: "asc" },
+  });
+  return rows.map((r) => ({
+    login: r.login,
+    firstName: r.firstName,
+    lastName: r.lastName,
+    semester: r.semester,
+    gpa: r.gpa,
+    credits: r.credits,
+    netsoulHours: r.netsoulHours,
+  }));
+}
+
+export async function saveStudentsToCache(students: IntraStudent[], promo: string, location: string): Promise<void> {
+  await prisma.$transaction(
+    students.map((s) =>
+      prisma.studentCache.upsert({
+        where: { login_promo_location: { login: s.login, promo, location } },
+        create: { login: s.login, promo, location, firstName: s.firstName, lastName: s.lastName, semester: s.semester, gpa: s.gpa, credits: s.credits, netsoulHours: s.netsoulHours, syncedAt: new Date() },
+        update: { firstName: s.firstName, lastName: s.lastName, semester: s.semester, gpa: s.gpa, credits: s.credits, netsoulHours: s.netsoulHours, syncedAt: new Date() },
+      })
+    )
+  );
+}
+
 export async function getMyActivities(
   userId: number,
   start: string,

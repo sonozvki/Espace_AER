@@ -87,6 +87,23 @@ model Resource {
   updatedAt   DateTime @updatedAt
 }
 
+model StudentCache {
+  id           Int      @id @default(autoincrement())
+  login        String
+  promo        String
+  location     String
+  firstName    String
+  lastName     String
+  semester     Int?
+  gpa          Float?
+  credits      Int?
+  netsoulHours Int?
+  syncedAt     DateTime @default(now())
+
+  @@unique([login, promo, location])
+  @@index([promo, location])
+}
+
 // V2 : Suivi étudiants (à activer en v2)
 // -> Décommenter les modèles Student, Grade, GradeSnapshot, Project,
 // -> StudentNote, IntraToken quand la feature sera développée.

@@ -5,6 +5,7 @@ import { memosController } from "@/modules/memos/memos.controller";
 import { guardsController } from "@/modules/guards/guards.controller";
 import { resourcesController } from "@/modules/resources/resources.controller";
 import { epitechController } from "@/modules/epitech/epitech.controller";
+import { startStudentSyncJob } from "@/jobs/sync-students";
 
 export const app = new Elysia()
   .use(
@@ -26,3 +27,4 @@ export const app = new Elysia()
 export type App = typeof app;
 
 console.log(`Server running on port ${process.env["PORT"] ?? 3000}`);
+startStudentSyncJob();

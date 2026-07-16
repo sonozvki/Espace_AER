@@ -5,6 +5,8 @@ import {
   getMyActivities,
   getIntraPromos,
   getIntraStudents,
+  getStudentsFromCache,
+  saveStudentsToCache,
   getStudentNotes,
   EpitechTokenMissingError,
   EpitechTokenInvalidError,
@@ -63,12 +65,22 @@ export const epitechController = new Elysia({ prefix: "/epitech" })
   .get(
     "/intra/students",
     async ({ session, query }) => {
+      const location = query.location ?? "FR/NCE";
+      const promo = query.promo;
+
+      // Lire depuis le cache d'abord
+      const cached = await getStudentsFromCache(promo, location);
+      if (cached.length > 0) return cached;
+
+      // Cache vide → live fetch + on alimente le cache pour la prochaine fois
       try {
-        return await getIntraStudents(Number(session.sub), {
-          location: query.location ?? "FR/NCE",
+        const students = await getIntraStudents(Number(session.sub), {
+          location,
           year: query.year ? Number(query.year) : undefined,
-          promo: query.promo,
+          promo,
         });
+        saveStudentsToCache(students, promo, location).catch(() => {});
+        return students;
       } catch (err) {
         return handleEpitechError(err);
       }
