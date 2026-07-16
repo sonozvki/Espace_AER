@@ -9,6 +9,7 @@ import { WhitelistPage } from "@/routes/WhitelistPage";
 import { SettingsPage } from "@/routes/SettingsPage";
 import { SuiviPage } from "@/routes/SuiviPage";
 import { StudentNotesPage } from "@/routes/StudentNotesPage";
+import { NotFoundPage } from "@/routes/NotFoundPage";
 import "@/styles/global.css";
 
 export const router = createBrowserRouter([
@@ -33,6 +34,6 @@ export const router = createBrowserRouter([
   },
   {
     path: "*",
-    element: <Navigate to="/" replace />,
+    element: <NotFoundPage />,
   },
 ]);

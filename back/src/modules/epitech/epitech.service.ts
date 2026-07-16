@@ -247,17 +247,14 @@ export async function getStudentNotes(userId: number, login: string): Promise<In
   );
 
   const modules = ((raw["modules"] ?? []) as Record<string, unknown>[]).map((m) => {
-    // Dériver le semestre depuis codeinstance (format NCE-0-1 → 1)
+    const codemodule = String(m["codemodule"] ?? "");
     const codeinstance = m["codeinstance"] != null ? String(m["codeinstance"]) : null;
-    const semesterFromInstance = codeinstance
-      ? Number(codeinstance.split("-").at(-1))
-      : null;
-    const semester = typeof m["semester"] === "number"
-      ? m["semester"]
-      : (semesterFromInstance !== null && !Number.isNaN(semesterFromInstance) ? semesterFromInstance : null);
+    // Semestre dérivé du codemodule : centaines du suffixe numérique (G-CPE-100→1, G-ING-200→2, G-ENG-001→0)
+    const numMatch = codemodule.match(/-(\d+)$/);
+    const semester = numMatch ? Math.floor(Number(numMatch[1]) / 100) : null;
 
     return {
-      codemodule: String(m["codemodule"] ?? ""),
+      codemodule,
       codeinstance,
       title: String(m["title"] ?? ""),
       grade: m["grade"] != null ? String(m["grade"]) : null,

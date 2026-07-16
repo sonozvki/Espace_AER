@@ -1,8 +1,8 @@
 import {
   Stack, Title, Text, Badge, Table, Group, ActionIcon, Loader, Center,
-  Paper, SimpleGrid, SegmentedControl, UnstyledButton, rem,
+  Paper, SimpleGrid, SegmentedControl, UnstyledButton, rem, Alert,
 } from "@mantine/core";
-import { IconArrowLeft, IconChevronUp, IconChevronDown, IconSelector } from "@tabler/icons-react";
+import { IconArrowLeft, IconChevronUp, IconChevronDown, IconSelector, IconAlertCircle } from "@tabler/icons-react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useStudentNotes } from "@/features/suivi/hooks";
 import { useEffect, useState } from "react";
@@ -70,18 +70,18 @@ function StatCard({ label, value }: { label: string; value: string | number | nu
   );
 }
 
-function formatDate(d: string | null) {
-  if (!d) return "—";
-  const date = new Date(d);
-  return date.toLocaleDateString("fr-FR", { day: "numeric", month: "short", year: "numeric" });
-}
+// function formatDate(d: string | null) {
+//   if (!d) return "—";
+//   const date = new Date(d);
+//   return date.toLocaleDateString("fr-FR", { day: "numeric", month: "short", year: "numeric" });
+// }
 
 export function StudentNotesPage() {
   const { login } = useParams<{ login: string }>();
   const navigate = useNavigate();
   const decodedLogin = decodeURIComponent(login ?? "");
 
-  const { data: notes, isLoading } = useStudentNotes(decodedLogin || null);
+  const { data: notes, isLoading, isError } = useStudentNotes(decodedLogin || null);
   const [student, setStudent] = useState<IntraStudent | null>(null);
   const [semFilter, setSemFilter] = useState("all");
   const [sortKey, setSortKey] = useState<SortKey>("begin");
@@ -91,6 +91,33 @@ export function StudentNotesPage() {
     const cached = sessionStorage.getItem(`student:${decodedLogin}`);
     if (cached) setStudent(JSON.parse(cached) as IntraStudent);
   }, [decodedLogin]);
+
+  if (isLoading) {
+    return (
+      <Center py="xl">
+        <Stack align="center" gap="sm">
+          <Loader />
+          <Text size="sm" c="dimmed">Chargement…</Text>
+        </Stack>
+      </Center>
+    );
+  }
+
+  if (isError || (!isLoading && !notes)) {
+    return (
+      <Stack gap="lg" maw={500}>
+        <Group>
+          <ActionIcon variant="subtle" onClick={() => navigate(-1)} size="lg">
+            <IconArrowLeft size={20} />
+          </ActionIcon>
+          <Text fw={600}>Retour</Text>
+        </Group>
+        <Alert icon={<IconAlertCircle size={16} />} color="red" title="Error">
+          Pourquoi tu recherches <Text span ff="monospace">{decodedLogin}</Text> ? Bizarre bizarre frérot.
+        </Alert>
+      </Stack>
+    );
+  }
 
   function handleSort(key: SortKey) {
     if (key === sortKey) setSortDir((d) => (d === "asc" ? "desc" : "asc"));
@@ -163,7 +190,7 @@ export function StudentNotesPage() {
                 <Table.Thead>
                   <Table.Tr>
                     <SortTh sortKey="title" active={sortKey} dir={sortDir} onSort={handleSort}>Titre</SortTh>
-                    <SortTh sortKey="begin" active={sortKey} dir={sortDir} onSort={handleSort}>Date</SortTh>
+                    {/* <SortTh sortKey="begin" active={sortKey} dir={sortDir} onSort={handleSort}>Date</SortTh> */}
                     <SortTh sortKey="grade" active={sortKey} dir={sortDir} onSort={handleSort}>Grade</SortTh>
                     <SortTh sortKey="note" active={sortKey} dir={sortDir} onSort={handleSort}>Note</SortTh>
                     <SortTh sortKey="credits" active={sortKey} dir={sortDir} onSort={handleSort}>Crédits</SortTh>
@@ -176,7 +203,7 @@ export function StudentNotesPage() {
                   {sorted.map((m) => (
                     <Table.Tr key={`${m.codemodule}-${m.scolaryear}-${m.codeinstance}`}>
                       <Table.Td><Text size="sm">{m.title}</Text></Table.Td>
-                      <Table.Td><Text size="sm">{formatDate(m.begin)}</Text></Table.Td>
+                      {/* <Table.Td><Text size="sm">{formatDate(m.begin)}</Text></Table.Td> */}
                       <Table.Td>
                         {m.grade
                           ? <Badge variant="light" size="sm"
