@@ -136,22 +136,24 @@ export async function getIntraStudents(
   const list = await fetchIntra<{ items?: Record<string, unknown>[]; total?: number }>(cookie, path);
   const students = list.items ?? [];
 
+  const year = schoolYear();
+  const netsoulStart = `${year}-09-25`;
+  const netsoulEnd = new Date().toISOString().slice(0, 10);
+
   const enriched = await Promise.all(
     students.map(async (s) => {
       const login = String(s["login"] ?? "");
       try {
         const [profile, netsoul] = await Promise.all([
           fetchIntra<Record<string, unknown>>(cookie, `/user/${encodeURIComponent(login)}/?format=json`),
-          fetchIntra<number[][]>(cookie, `/user/${encodeURIComponent(login)}/netsoul?format=json`).catch(() => null),
+          fetchIntra<number[][]>(cookie, `/user/${encodeURIComponent(login)}/netsoul?format=json&start=${netsoulStart}&end=${netsoulEnd}`).catch(() => null),
         ]);
 
         const gpaArr = Array.isArray(profile["gpa"]) ? (profile["gpa"] as { gpa: string }[]) : [];
         const gpaRaw = gpaArr[0]?.gpa ? Number(gpaArr[0].gpa) : null;
 
         // Netsoul : somme des secondes actives (index 1), divisée par 3600
-        const netsoulSecs = netsoul
-          ? netsoul.reduce((acc, row) => acc + (row[1] && row[1] > 0 ? row[1] : 0), 0)
-          : null;
+        const netsoulSecs = netsoul ? netsoul.reduce((acc, row) => acc + (row[1] && row[1] > 0 ? row[1] : 0), 0) : null;
 
         return {
           login,
