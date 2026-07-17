@@ -2,7 +2,7 @@ import {
   Stack, Title, Select, Group, Table, Text, Badge, Loader, Center, Anchor, Alert,
   UnstyledButton, rem,
 } from "@mantine/core";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { IconAlertCircle, IconChevronUp, IconChevronDown, IconSelector } from "@tabler/icons-react";
 import { useIntraPromos, useIntraStudents } from "@/features/suivi/hooks";
@@ -57,6 +57,18 @@ export function SuiviPage() {
   const [promo, setPromo] = useState<string | null>(null);
   const [sortKey, setSortKey] = useState<SortKey>("gpa");
   const [sortDir, setSortDir] = useState<SortDir>("desc");
+  const [showNumbers, setShowNumbers] = useState(false);
+
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) {
+      if (e.key === "k" && (e.metaKey || e.ctrlKey)) {
+        e.preventDefault();
+        setShowNumbers((v) => !v);
+      }
+    }
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
 
   const { data: promos, isLoading: loadingPromos, error: promosError } = useIntraPromos();
   const { data: students, isLoading: loadingStudents, error: studentsError } = useIntraStudents(promo);
@@ -142,6 +154,7 @@ export function SuiviPage() {
         <Table withTableBorder withColumnBorders striped highlightOnHover style={{ cursor: "pointer" }}>
           <Table.Thead>
             <Table.Tr>
+              {showNumbers && <Table.Th style={{ width: 40, color: "var(--mantine-color-dimmed)", fontFamily: "monospace", fontSize: "0.75rem" }}>#</Table.Th>}
               <SortTh sortKey="lastName" active={sortKey} dir={sortDir} onSort={handleSort}>Nom</SortTh>
               <Table.Th>Prénom</Table.Th>
               <Table.Th>Login</Table.Th>
@@ -152,8 +165,9 @@ export function SuiviPage() {
             </Table.Tr>
           </Table.Thead>
           <Table.Tbody>
-            {sorted.map((s) => (
+            {sorted.map((s, i) => (
               <Table.Tr key={s.login} onClick={() => handleRowClick(s)}>
+                {showNumbers && <Table.Td><Text size="xs" c="dimmed" ff="monospace">{i + 1}</Text></Table.Td>}
                 <Table.Td><Text size="sm" fw={500}>{s.lastName}</Text></Table.Td>
                 <Table.Td><Text size="sm">{s.firstName}</Text></Table.Td>
                 <Table.Td><Text size="sm" ff="monospace" c="dimmed">{s.login}</Text></Table.Td>
