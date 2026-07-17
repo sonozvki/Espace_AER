@@ -2,6 +2,7 @@ import { Modal, TextInput, Button, Group, Text, Loader, Center, Stack, Segmented
 import { useState, useEffect } from "react";
 import { useMediaQuery } from "@mantine/hooks";
 import MDEditor from "@uiw/react-md-editor";
+import remarkBreaks from "remark-breaks";
 import { useMemo, useCreateMemo, useUpdateMemo } from "../hooks";
 
 // autre template
@@ -146,6 +147,7 @@ export function MemoEditorModal({ opened, onClose, memoId }: Props) {
               height="100%"
               style={{ height: "100%" }}
               visibleDragbar={isMobile ? false : true}
+              previewOptions={{ remarkPlugins: [[remarkBreaks]] }}
             />
           </div>
 

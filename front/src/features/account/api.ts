@@ -8,7 +8,5 @@ export const accountApi = {
     }),
 
   clearEpitechToken: () =>
-    apiFetch<{ hasEpitechToken: boolean }>("/auth/epitech-token", {
-      method: "DELETE",
-    }),
+    apiFetch<{ hasEpitechToken: boolean }>("/auth/epitech-token", { method: "DELETE" }),
 };

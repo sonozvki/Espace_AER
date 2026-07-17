@@ -23,6 +23,7 @@ import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { useGuards } from "@/features/guards/hooks";
 import { EpitechPanel } from "@/features/epitech/components/EpitechPanel";
+
 import type { Guard, GuardUser } from "@/features/guards/types";
 
 const MONO = '"IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace';

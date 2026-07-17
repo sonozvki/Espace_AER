@@ -15,7 +15,7 @@ model User {
   email        String   @unique
   name         String
   role         Role     @default(ADMIN)
-  epitechToken String?  // Cookie "user" de intra.epitech.eu, chiffré (AES-256-GCM)
+  epitechToken   String?  // Cookie "user" de intra.epitech.eu, chiffré (AES-256-GCM)
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
@@ -85,6 +85,23 @@ model Resource {
   fileData    Bytes?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+}
+
+model StudentCache {
+  id           Int      @id @default(autoincrement())
+  login        String
+  promo        String
+  location     String
+  firstName    String
+  lastName     String
+  semester     Int?
+  gpa          Float?
+  credits      Int?
+  netsoulHours Int?
+  syncedAt     DateTime @default(now())
+
+  @@unique([login, promo, location])
+  @@index([promo, location])
 }
 
 // V2 : Suivi étudiants (à activer en v2)

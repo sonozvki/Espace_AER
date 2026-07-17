@@ -10,6 +10,7 @@ const NAV_ITEMS = [
   { path: "/memos", label: "Mémos" },
   { path: "/guards", label: "Gardes" },
   { path: "/toolbox", label: "Toolbox" },
+  { path: "/suivi", label: "Trombi" },
   { path: "/whitelist", label: "Whitelist" },
   { path: "/settings", label: "Mon compte" },
 ];

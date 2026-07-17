@@ -11,6 +11,7 @@
   },
   "dependencies": {
     "@elysiajs/eden": "latest",
+    "@mantine/charts": "^9.4.1",
     "@mantine/core": "^7.17.0",
     "@mantine/dates": "^7.17.0",
     "@mantine/form": "^9.4.0",
@@ -23,6 +24,8 @@
     "react": "^18",
     "react-dom": "^18",
     "react-router-dom": "^6",
+    "recharts": "^3.9.2",
+    "remark-breaks": "^4.0.0",
     "zod": "latest",
     "zustand": "^5.0.0"
   },
