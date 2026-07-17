@@ -70,12 +70,6 @@ function StatCard({ label, value }: { label: string; value: string | number | nu
   );
 }
 
-// function formatDate(d: string | null) {
-//   if (!d) return "—";
-//   const date = new Date(d);
-//   return date.toLocaleDateString("fr-FR", { day: "numeric", month: "short", year: "numeric" });
-// }
-
 export function StudentNotesPage() {
   const { login } = useParams<{ login: string }>();
   const navigate = useNavigate();
@@ -190,7 +184,6 @@ export function StudentNotesPage() {
                 <Table.Thead>
                   <Table.Tr>
                     <SortTh sortKey="title" active={sortKey} dir={sortDir} onSort={handleSort}>Titre</SortTh>
-                    {/* <SortTh sortKey="begin" active={sortKey} dir={sortDir} onSort={handleSort}>Date</SortTh> */}
                     <SortTh sortKey="grade" active={sortKey} dir={sortDir} onSort={handleSort}>Grade</SortTh>
                     <SortTh sortKey="note" active={sortKey} dir={sortDir} onSort={handleSort}>Note</SortTh>
                     <SortTh sortKey="credits" active={sortKey} dir={sortDir} onSort={handleSort}>Crédits</SortTh>
@@ -203,7 +196,6 @@ export function StudentNotesPage() {
                   {sorted.map((m) => (
                     <Table.Tr key={`${m.codemodule}-${m.scolaryear}-${m.codeinstance}`}>
                       <Table.Td><Text size="sm">{m.title}</Text></Table.Td>
-                      {/* <Table.Td><Text size="sm">{formatDate(m.begin)}</Text></Table.Td> */}
                       <Table.Td>
                         {m.grade
                           ? <Badge variant="light" size="sm"

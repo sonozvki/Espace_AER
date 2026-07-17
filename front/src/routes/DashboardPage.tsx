@@ -13,16 +13,19 @@ import {
   ThemeIcon,
   SimpleGrid,
   Divider,
+  Progress,
 } from "@mantine/core";
 import {
   IconShield,
   IconUserOff,
   IconArrowRight,
+  IconChartBar,
 } from "@tabler/icons-react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { useGuards } from "@/features/guards/hooks";
 import { EpitechPanel } from "@/features/epitech/components/EpitechPanel";
+import { useGuardStats } from "@/features/stats/hooks";
 import type { Guard, GuardUser } from "@/features/guards/types";
 
 const MONO = '"IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace';
@@ -124,6 +127,7 @@ function AbsenceRow({ date, user, reason }: { date: string; user: GuardUser; rea
 export function DashboardPage() {
   const { user } = useAuth();
   const { data: guards, isLoading: guardsLoading } = useGuards();
+  const { data: guardStats, isLoading: guardStatsLoading } = useGuardStats();
 
   const upcomingAbsences = useMemo<Array<{ date: string; user: GuardUser; reason: "absent" | "unavailable" }>>(() => {
     if (!guards) return [];
@@ -319,6 +323,80 @@ export function DashboardPage() {
 
       {/* Activités Epitech */}
       <EpitechPanel hasToken={user?.hasEpitechToken ?? false} />
+
+      {/* Stats gardes */}
+      <Box>
+        <Group gap={8} align="center">
+          <Box style={{ width: 24, height: 2, background: "var(--mantine-color-pink-5)" }} />
+          <Text size="xs" tt="uppercase" c="pink.5" style={{ fontFamily: MONO, letterSpacing: "0.2em" }}>
+            statistiques_
+          </Text>
+        </Group>
+        <Group justify="space-between" align="baseline" mt={4}>
+          <Title order={2} ff="Anton, sans-serif" tt="uppercase">
+            Gardes par AER
+          </Title>
+          <Text size="xs" c="dimmed" style={{ fontFamily: MONO }}>
+            année scolaire en cours_
+          </Text>
+        </Group>
+      </Box>
+
+      <Paper p="md" withBorder style={{ borderColor: "var(--epi-border)" }}>
+        <Group mb="md">
+          <ThemeIcon variant="light" color="epitech">
+            <IconChartBar size={16} />
+          </ThemeIcon>
+          <Text fw={700} ff="Anton, sans-serif" size="lg">Répartition des gardes</Text>
+        </Group>
+        <Divider mb="md" />
+        {guardStatsLoading ? (
+          <Center py="md"><Loader size="sm" /></Center>
+        ) : !guardStats || guardStats.length === 0 ? (
+          <Text size="sm" c="dimmed" ta="center" py="md">Aucune donnée</Text>
+        ) : (
+          <Stack gap="sm">
+            {(() => {
+              const max = Math.max(...guardStats.map((s) => s.count), 1);
+              const total = guardStats.reduce((acc, s) => acc + s.count, 0);
+              return guardStats.map((s) => {
+                const isMe = s.userId === user?.id;
+                return (
+                  <Box key={s.userId}>
+                    <Group justify="space-between" mb={4}>
+                      <Group gap="xs">
+                        <Text size="sm" fw={isMe ? 700 : 400}>
+                          {s.name.split(" ")[0]}
+                        </Text>
+                        {isMe && <Badge size="xs" variant="light" color="epitech">moi</Badge>}
+                      </Group>
+                      <Group gap="xs">
+                        <Text size="sm" fw={600}>{s.count}</Text>
+                        <Text size="xs" c="dimmed">
+                          ({total > 0 ? Math.round((s.count / total) * 100) : 0}%)
+                        </Text>
+                      </Group>
+                    </Group>
+                    <Progress
+                      value={total > 0 ? (s.count / max) * 100 : 0}
+                      color={isMe ? "epitech" : "gray"}
+                      size="md"
+                      radius="xs"
+                    />
+                  </Box>
+                );
+              });
+            })()}
+            <Divider mt="xs" />
+            <Group justify="space-between">
+              <Text size="xs" c="dimmed" style={{ fontFamily: MONO }}>total</Text>
+              <Text size="xs" fw={600} style={{ fontFamily: MONO }}>
+                {guardStats.reduce((acc, s) => acc + s.count, 0)} gardes assurées
+              </Text>
+            </Group>
+          </Stack>
+        )}
+      </Paper>
     </Stack>
   );
 }
