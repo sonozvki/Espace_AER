@@ -219,7 +219,7 @@ export function SettingsPage() {
                 <ThemeIcon variant="light" color="violet"><IconActivity size={16} /></ThemeIcon>
                 <div>
                   <Text fw={700} size="lg" ff="Anton, sans-serif">Activités effectuées</Text>
-                  <Text size="sm" c="dimmed">Suivis, défenses, surveillances… (cliquer pour voir le détail)</Text>
+                  <Text size="sm" c="dimmed">Follow up, défenses, bootstrap... (cliquer pour voir le détail)</Text>
                 </div>
               </Group>
               <Divider mb="md" />
