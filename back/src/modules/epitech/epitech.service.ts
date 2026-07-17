@@ -69,13 +69,13 @@ export class EpitechUpstreamError extends Error {}
 
 const UA = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36";
 
-async function getUserCookie(userId: number): Promise<string> {
+export async function getUserCookie(userId: number): Promise<string> {
   const user = await prisma.user.findUnique({ where: { id: userId }, select: { epitechToken: true } });
   if (!user?.epitechToken) throw new EpitechTokenMissingError();
   return decrypt(user.epitechToken);
 }
 
-async function fetchIntra<T>(cookie: string, path: string): Promise<T> {
+export async function fetchIntra<T>(cookie: string, path: string): Promise<T> {
   let res: Response;
   try {
     res = await fetch(`${INTRA_BASE}${path}`, {
