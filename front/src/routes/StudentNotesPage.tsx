@@ -46,6 +46,7 @@ function computeProjection(modules: IntraModuleNote[], projected: Record<string,
       projectedCredits += credits;
     }
   }
+
   return {
     gpa: totalCreditsGpa > 0 ? totalPoints / totalCreditsGpa : null,
     credits: projectedCredits,
