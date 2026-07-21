@@ -35,7 +35,6 @@ function computeProjection(modules: IntraModuleNote[], projected: Record<string,
   let totalPoints = 0;
   let totalCreditsGpa = 0;
   let projectedCredits = 0;
-
   for (const m of modules) {
     const grade = projected[moduleKey(m)] ?? m.grade ?? "-";
     const credits = m.credits ?? 0;
@@ -241,7 +240,9 @@ export function StudentNotesPage() {
                   <Table.Tr>
                     <SortTh sortKey="title" active={sortKey} dir={sortDir} onSort={handleSort}>Titre</SortTh>
                     <SortTh sortKey="grade" active={sortKey} dir={sortDir} onSort={handleSort}>Grade</SortTh>
-                    <Table.Th><Text size="sm" fw={600}>Projection</Text></Table.Th>
+                    <Table.Th style={{ width: 120 }}>
+                      <Text size="sm" fw={600}>Projection</Text>
+                    </Table.Th>
                     <SortTh sortKey="credits" active={sortKey} dir={sortDir} onSort={handleSort}>Crédits</SortTh>
                     <SortTh sortKey="scolaryear" active={sortKey} dir={sortDir} onSort={handleSort}>Année</SortTh>
                     <Table.Th>Code module</Table.Th>
@@ -263,7 +264,7 @@ export function StudentNotesPage() {
                               </Badge>
                             : <Text size="sm" c="dimmed">—</Text>}
                         </Table.Td>
-                        <Table.Td>
+                        <Table.Td style={{ width: 120 }}>
                           <Select
                             size="xs"
                             value={projGrade}
@@ -273,7 +274,7 @@ export function StudentNotesPage() {
                             data={GRADE_OPTIONS}
                             allowDeselect={false}
                             comboboxProps={{ withinPortal: true }}
-                            styles={{ input: { minWidth: 90 } }}
+                            w={110}
                           />
                         </Table.Td>
                         <Table.Td><Text size="sm">{m.credits ?? "—"}</Text></Table.Td>
