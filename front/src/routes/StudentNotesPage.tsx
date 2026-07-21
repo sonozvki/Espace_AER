@@ -1,6 +1,6 @@
 import {
   Stack, Title, Text, Badge, Table, Group, ActionIcon, Loader, Center,
-  Paper, SimpleGrid, SegmentedControl, UnstyledButton, rem, Alert,
+  Paper, SimpleGrid, SegmentedControl, UnstyledButton, rem, Alert, Select,
 } from "@mantine/core";
 import { IconArrowLeft, IconChevronUp, IconChevronDown, IconSelector, IconAlertCircle } from "@tabler/icons-react";
 import { useNavigate, useParams } from "react-router-dom";
@@ -8,14 +8,53 @@ import { useStudentNotes } from "@/features/suivi/hooks";
 import { useEffect, useState } from "react";
 import type { IntraStudent, IntraModuleNote } from "@/features/suivi/api";
 
-// Ordre des grades pour le tri
 const GRADE_ORDER: Record<string, number> = { A: 0, B: 1, C: 2, D: 3, Acquis: 4, "-": 5, Echec: 6 };
 function gradeRank(g: string | null) {
   if (g === null) return 99;
   return GRADE_ORDER[g] ?? 50;
 }
 
-type SortKey = "title" | "grade" | "credits" | "note" | "scolaryear" | "begin";
+const GRADE_POINTS: Record<string, number> = { A: 4, B: 3, C: 2, D: 1, Echec: 0 };
+const PASSING_GRADES = new Set(["A", "B", "C", "D", "Acquis"]);
+
+const GRADE_OPTIONS = [
+  { value: "-", label: "—" },
+  { value: "A", label: "A" },
+  { value: "B", label: "B" },
+  { value: "C", label: "C" },
+  { value: "D", label: "D" },
+  { value: "Acquis", label: "Acquis" },
+  { value: "Echec", label: "Echec" },
+];
+
+function moduleKey(m: IntraModuleNote) {
+  return `${m.codemodule}-${m.scolaryear}-${m.codeinstance}`;
+}
+
+function computeProjection(modules: IntraModuleNote[], projected: Record<string, string>) {
+  let totalPoints = 0;
+  let totalCreditsGpa = 0;
+  let projectedCredits = 0;
+
+  for (const m of modules) {
+    const grade = projected[moduleKey(m)] ?? m.grade ?? "-";
+    const credits = m.credits ?? 0;
+    if (grade in GRADE_POINTS && credits > 0) {
+      totalPoints += (GRADE_POINTS[grade] ?? 0) * credits;
+      totalCreditsGpa += credits;
+    }
+    if (PASSING_GRADES.has(grade) && credits > 0) {
+      projectedCredits += credits;
+    }
+  }
+
+  return {
+    gpa: totalCreditsGpa > 0 ? totalPoints / totalCreditsGpa : null,
+    credits: projectedCredits,
+  };
+}
+
+type SortKey = "title" | "grade" | "credits" | "scolaryear" | "begin";
 type SortDir = "asc" | "desc";
 
 function sortModules(rows: IntraModuleNote[], key: SortKey, dir: SortDir) {
@@ -80,11 +119,21 @@ export function StudentNotesPage() {
   const [semFilter, setSemFilter] = useState("all");
   const [sortKey, setSortKey] = useState<SortKey>("begin");
   const [sortDir, setSortDir] = useState<SortDir>("asc");
+  const [projectedGrades, setProjectedGrades] = useState<Record<string, string>>({});
 
   useEffect(() => {
     const cached = sessionStorage.getItem(`student:${decodedLogin}`);
     if (cached) setStudent(JSON.parse(cached) as IntraStudent);
   }, [decodedLogin]);
+
+  useEffect(() => {
+    if (!notes) return;
+    const initial: Record<string, string> = {};
+    for (const m of notes.modules) {
+      initial[moduleKey(m)] = m.grade ?? "-";
+    }
+    setProjectedGrades(initial);
+  }, [notes]);
 
   if (isLoading) {
     return (
@@ -120,7 +169,6 @@ export function StudentNotesPage() {
 
   const name = student ? `${student.firstName} ${student.lastName}` : decodedLogin;
 
-  // Semestres disponibles
   const semesters = notes
     ? [...new Set(notes.modules.map((m) => m.semester).filter((s): s is number => s !== null))].sort()
     : [];
@@ -136,11 +184,12 @@ export function StudentNotesPage() {
 
   const sorted = sortModules(filteredModules, sortKey, sortDir);
 
-  // Totaux pour le semestre sélectionné
   const totalCredits = filteredModules.reduce((acc, m) => acc + (m.credits ?? 0), 0);
   const acquiredCredits = filteredModules
     .filter((m) => m.grade && m.grade !== "-" && m.grade !== "Echec")
     .reduce((acc, m) => acc + (m.credits ?? 0), 0);
+
+  const projection = computeProjection(filteredModules, projectedGrades);
 
   return (
     <Stack gap="xl">
@@ -159,6 +208,13 @@ export function StudentNotesPage() {
           <StatCard label="GPA" value={student.gpa !== null ? student.gpa.toFixed(2) : null} />
           <StatCard label="Crédits totaux" value={student.credits} />
           <StatCard label="Semestre actuel" value={student.semester !== null ? `S${student.semester}` : null} />
+          <Paper p="md" withBorder style={{ borderColor: "var(--mantine-color-green-5)" }}>
+            <Text size="xs" c="green" tt="uppercase" fw={600} mb={4}>Projection GPA</Text>
+            <Text size="xl" fw={700} c="green.7">
+              {projection.gpa !== null ? projection.gpa.toFixed(2) : "—"}
+            </Text>
+            <Text size="xs" c="dimmed" mt={2}>{projection.credits} crédits projetés</Text>
+          </Paper>
         </SimpleGrid>
       )}
 
@@ -185,7 +241,7 @@ export function StudentNotesPage() {
                   <Table.Tr>
                     <SortTh sortKey="title" active={sortKey} dir={sortDir} onSort={handleSort}>Titre</SortTh>
                     <SortTh sortKey="grade" active={sortKey} dir={sortDir} onSort={handleSort}>Grade</SortTh>
-                    <SortTh sortKey="note" active={sortKey} dir={sortDir} onSort={handleSort}>Note</SortTh>
+                    <Table.Th><Text size="sm" fw={600}>Projection</Text></Table.Th>
                     <SortTh sortKey="credits" active={sortKey} dir={sortDir} onSort={handleSort}>Crédits</SortTh>
                     <SortTh sortKey="scolaryear" active={sortKey} dir={sortDir} onSort={handleSort}>Année</SortTh>
                     <Table.Th>Code module</Table.Th>
@@ -193,26 +249,40 @@ export function StudentNotesPage() {
                   </Table.Tr>
                 </Table.Thead>
                 <Table.Tbody>
-                  {sorted.map((m) => (
-                    <Table.Tr key={`${m.codemodule}-${m.scolaryear}-${m.codeinstance}`}>
-                      <Table.Td><Text size="sm">{m.title}</Text></Table.Td>
-                      <Table.Td>
-                        {m.grade
-                          ? <Badge variant="light" size="sm"
-                              color={m.grade === "Echec" ? "red" : m.grade === "-" ? "gray" : "blue"}>
-                              {m.grade}
-                            </Badge>
-                          : <Text size="sm" c="dimmed">—</Text>}
-                      </Table.Td>
-                      <Table.Td>
-                        <Text size="sm">{m.note !== null ? m.note.toFixed(2) : "—"}</Text>
-                      </Table.Td>
-                      <Table.Td><Text size="sm">{m.credits ?? "—"}</Text></Table.Td>
-                      <Table.Td><Text size="sm">{m.scolaryear ?? "—"}</Text></Table.Td>
-                      <Table.Td><Text size="sm" ff="monospace" c="dimmed">{m.codemodule}</Text></Table.Td>
-                      <Table.Td><Text size="sm" c="dimmed">{m.cycle ?? "—"}</Text></Table.Td>
-                    </Table.Tr>
-                  ))}
+                  {sorted.map((m) => {
+                    const key = moduleKey(m);
+                    const projGrade = projectedGrades[key] ?? m.grade ?? "-";
+                    return (
+                      <Table.Tr key={key}>
+                        <Table.Td><Text size="sm">{m.title}</Text></Table.Td>
+                        <Table.Td>
+                          {m.grade
+                            ? <Badge variant="light" size="sm"
+                                color={m.grade === "Echec" ? "red" : m.grade === "-" ? "gray" : "blue"}>
+                                {m.grade}
+                              </Badge>
+                            : <Text size="sm" c="dimmed">—</Text>}
+                        </Table.Td>
+                        <Table.Td>
+                          <Select
+                            size="xs"
+                            value={projGrade}
+                            onChange={(v) =>
+                              setProjectedGrades((prev) => ({ ...prev, [key]: v ?? "-" }))
+                            }
+                            data={GRADE_OPTIONS}
+                            allowDeselect={false}
+                            comboboxProps={{ withinPortal: true }}
+                            styles={{ input: { minWidth: 90 } }}
+                          />
+                        </Table.Td>
+                        <Table.Td><Text size="sm">{m.credits ?? "—"}</Text></Table.Td>
+                        <Table.Td><Text size="sm">{m.scolaryear ?? "—"}</Text></Table.Td>
+                        <Table.Td><Text size="sm" ff="monospace" c="dimmed">{m.codemodule}</Text></Table.Td>
+                        <Table.Td><Text size="sm" c="dimmed">{m.cycle ?? "—"}</Text></Table.Td>
+                      </Table.Tr>
+                    );
+                  })}
                 </Table.Tbody>
               </Table>
             </>
