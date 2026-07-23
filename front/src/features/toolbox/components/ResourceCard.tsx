@@ -3,7 +3,6 @@ import {
   IconTrash,
   IconPencil,
   IconLink,
-  IconBrandDiscord,
   IconFileText,
   IconTool,
   IconSchool,
