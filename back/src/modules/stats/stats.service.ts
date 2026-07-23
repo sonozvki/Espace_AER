@@ -1,11 +1,7 @@
 import { prisma } from "@/db/prisma";
 import { decrypt } from "@/lib/crypto";
-import { getUserCookie, fetchIntra, EpitechTokenMissingError, EpitechTokenInvalidError } from "@/modules/epitech/epitech.service";
-
-function schoolYear() {
-  const now = new Date();
-  return now.getMonth() < 8 ? now.getFullYear() - 1 : now.getFullYear();
-}
+import { schoolYear } from "@/lib/dates";
+import { getUserCookie, fetchIntra, EpitechTokenMissingError } from "@/modules/epitech/epitech.service";
 
 function schoolYearBounds() {
   const year = schoolYear();
@@ -165,10 +161,7 @@ export async function getAerActivityStats(): Promise<AerActivityStat[]> {
           count: staffActivities.length,
           activities: staffActivities,
         };
-      } catch (e) {
-        if (e instanceof EpitechTokenInvalidError) {
-          return { userId: u.id, name: u.name, email: u.email, count: null, activities: null };
-        }
+      } catch {
         return { userId: u.id, name: u.name, email: u.email, count: null, activities: null };
       }
     })

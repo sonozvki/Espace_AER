@@ -1,5 +1,6 @@
 import { prisma } from "@/db/prisma";
 import { decrypt } from "@/lib/crypto";
+import { schoolYear } from "@/lib/dates";
 
 const INTRA_BASE = "https://intra.epitech.eu";
 
@@ -107,12 +108,6 @@ async function intraCookieFetch<T>(userId: number, path: string): Promise<T> {
   return fetchIntra<T>(cookie, path);
 }
 
-function schoolYear() {
-  const now = new Date();
-  // L'année scolaire démarre en septembre : avant sept = année précédente
-  return now.getMonth() < 8 ? now.getFullYear() - 1 : now.getFullYear();
-}
-
 export async function getIntraPromos(
   userId: number,
   location = "FR/NCE",
@@ -215,13 +210,7 @@ export async function getMyActivities(
   end: string
 ): Promise<EpitechActivity[]> {
   const url = `/planning/load?format=json&start=${start}&end=${end}`;
-  let data: unknown;
-  try {
-    data = await intraCookieFetch<unknown>(userId, url);
-  } catch (err) {
-    throw err;
-  }
-
+  const data = await intraCookieFetch<unknown>(userId, url);
   const events: RawEvent[] = Array.isArray(data) ? (data as RawEvent[]) : [];
 
   return events
