@@ -11,6 +11,7 @@ const NAV_ITEMS = [
   { path: "/guards", label: "Gardes" },
   { path: "/toolbox", label: "Toolbox" },
   { path: "/suivi", label: "Trombi" },
+  { path: "/moulis", label: "Moulis" },
   { path: "/whitelist", label: "Whitelist" },
   { path: "/settings", label: "Mon compte" },
 ];
