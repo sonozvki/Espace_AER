@@ -12,11 +12,11 @@ function schoolYearBounds() {
 }
 
 function deriveStudentLogin(aerEmail: string): string {
-  // james1.farell@epitech.eu → james.farell@epitech.eu
+  // prénom1.nom@epitech.eu → prénom.nom@epitech.eu
   return aerEmail.replace(/\d+/, "");
 }
 
-// ─── Gardes ────────────────────────────────────────────────────────────────
+// Gardes
 
 export type GuardStat = {
   userId: number;
@@ -42,7 +42,6 @@ export async function getGuardStats(): Promise<GuardStat[]> {
   });
 
   const countMap = new Map(counts.map((c) => [c.guardAerId, c._count.id]));
-
   return users
     .map((u) => ({
       userId: u.id,
@@ -53,7 +52,7 @@ export async function getGuardStats(): Promise<GuardStat[]> {
     .sort((a, b) => b.count - a.count);
 }
 
-// ─── Netsoul ───────────────────────────────────────────────────────────────
+// Netsoul
 
 export type AerNetsoulStat = {
   userId: number;
@@ -98,7 +97,7 @@ export async function getAerNetsoulStats(requestingUserId: number): Promise<AerN
   return results.sort((a, b) => (b.totalHours ?? -1) - (a.totalHours ?? -1));
 }
 
-// ─── Activités ─────────────────────────────────────────────────────────────
+// Activités
 
 export type AerActivityItem = {
   title: string;
