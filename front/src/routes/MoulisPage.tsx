@@ -8,7 +8,7 @@ import {
 } from "recharts";
 import { useDisclosure } from "@mantine/hooks";
 import { notifications } from "@mantine/notifications";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { IconPlayerPlay, IconRefresh, IconCheck, IconX, IconSearch } from "@tabler/icons-react";
 import {
@@ -17,10 +17,9 @@ import {
   useMoulisGroups,
   useMoulisGroupDetail,
   useMoulisGroupTrend,
-  useTriggerAll,
 } from "@/features/moulis/hooks";
-import { triggerGroup as apiTriggerGroup } from "@/features/moulis/api";
-import type { GroupSummary } from "@/features/moulis/types";
+import { triggerGroup as apiTriggerGroup, triggerAll as apiTriggerAll } from "@/features/moulis/api";
+import type { GroupSummary, TriggerParams } from "@/features/moulis/types";
 
 function passRate(s: GroupSummary) {
   return s.totalCount > 0 ? (s.passCount / s.totalCount) * 100 : 0;
@@ -40,32 +39,113 @@ function ResultBadge({ result, building }: { result: string | null; building: bo
   return <Badge color="orange">{result}</Badge>;
 }
 
+function BuildProgress({ startedAt, estimatedDuration }: { startedAt: number | null; estimatedDuration: number | null }) {
+  const [now, setNow] = useState(Date.now());
+  useEffect(() => {
+    const id = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(id);
+  }, []);
+
+  const elapsed = startedAt ? now - startedAt : 0;
+  const elapsedSec = Math.floor(elapsed / 1000);
+  const label = elapsedSec < 60 ? `${elapsedSec}s` : `${Math.floor(elapsedSec / 60)}m${String(elapsedSec % 60).padStart(2, "0")}s`;
+
+  if (!estimatedDuration) {
+    return (
+      <Stack gap={4}>
+        <Progress value={100} animated size="sm" color="blue" />
+        <Text size="xs" c="dimmed">En cours · {label}</Text>
+      </Stack>
+    );
+  }
+
+  const pct = Math.min(Math.round((elapsed / estimatedDuration) * 100), 99);
+  return (
+    <Stack gap={4}>
+      <Progress value={pct} size="sm" color="blue" animated={pct < 99} />
+      <Text size="xs" c="dimmed">{label} · ~{Math.round(estimatedDuration / 1000)}s est.</Text>
+    </Stack>
+  );
+}
+
+const DEFAULT_PARAMS: TriggerParams = {
+  visibility: "Private",
+  delivery: "Git",
+  force: false,
+  checkoutDatetime: "",
+};
+
+function TriggerParamsModal({
+  opened, onClose, onConfirm, title, loading,
+}: {
+  opened: boolean;
+  onClose: () => void;
+  onConfirm: (params: TriggerParams) => void;
+  title: string;
+  loading: boolean;
+}) {
+  const [params, setParams] = useState<TriggerParams>(DEFAULT_PARAMS);
+
+  useEffect(() => {
+    if (opened) setParams(DEFAULT_PARAMS);
+  }, [opened]);
+
+  return (
+    <Modal opened={opened} onClose={onClose} title={title} size="md" centered>
+      <form onSubmit={(e) => { e.preventDefault(); onConfirm(params); }}>
+        <Stack gap="md">
+          <Select
+            label="Visibilité"
+            description="Private : non visible pour les étudiants · Public : visible sur my.epitech.eu"
+            data={["Private", "Public"]}
+            value={params.visibility}
+            onChange={(v) => v && setParams((p) => ({ ...p, visibility: v as TriggerParams["visibility"] }))}
+          />
+          <Select
+            label="Delivery"
+            description="Git : dernier commit · Ramassage : avant la date de rendu · Bttf : dernier commit (notation bttf)"
+            data={["Git", "Ramassage", "Bttf"]}
+            value={params.delivery}
+            onChange={(v) => v && setParams((p) => ({ ...p, delivery: v as TriggerParams["delivery"] }))}
+          />
+          <Checkbox
+            label="FORCE"
+            description="Forcer l'exécution même sans changement de code source"
+            checked={params.force}
+            onChange={(e) => setParams((p) => ({ ...p, force: e.currentTarget.checked }))}
+          />
+          <TextInput
+            label="CHECKOUT_DELIVERY_DATETIME"
+            description="Optionnel · Format ISO8601, ex : 2020-04-23T16:31:34Z"
+            placeholder="Laisser vide pour la date actuelle"
+            value={params.checkoutDatetime}
+            onChange={(e) => setParams((p) => ({ ...p, checkoutDatetime: e.currentTarget.value }))}
+          />
+          <Group justify="flex-end" mt="xs">
+            <Button variant="subtle" type="button" onClick={onClose}>Annuler</Button>
+            <Button type="submit" leftSection={<IconPlayerPlay size={14} />} loading={loading}>
+              Lancer
+            </Button>
+          </Group>
+        </Stack>
+      </form>
+    </Modal>
+  );
+}
+
 function GroupModal({
-  opened, onClose,
+  opened, onClose, onTriggerRequest,
   module, project, group,
 }: {
   opened: boolean;
   onClose: () => void;
+  onTriggerRequest: () => void;
   module: string;
   project: string;
   group: string | null;
 }) {
   const { data, isLoading } = useMoulisGroupDetail(module, project, group);
   const { data: trend } = useMoulisGroupTrend(module, project, group);
-  const [launching, setLaunching] = useState(false);
-
-  async function handleTrigger() {
-    if (!group) return;
-    setLaunching(true);
-    try {
-      await apiTriggerGroup(module, project, group);
-      notifications.show({ message: "Build lancé", color: "green" });
-    } catch {
-      notifications.show({ message: "Échec du déclenchement", color: "red" });
-    } finally {
-      setLaunching(false);
-    }
-  }
 
   return (
     <Modal
@@ -88,8 +168,7 @@ function GroupModal({
             <Button
               size="xs"
               leftSection={<IconPlayerPlay size={14} />}
-              loading={launching}
-              onClick={handleTrigger}
+              onClick={onTriggerRequest}
             >
               Relancer
             </Button>
@@ -224,24 +303,82 @@ function GroupModal({
   );
 }
 
+const CACHE_KEY = "moulis:selection";
+const CACHE_TTL = 2 * 60 * 60 * 1000;
+
+function readSelectionCache(): { module: string | null; project: string | null } {
+  try {
+    const raw = localStorage.getItem(CACHE_KEY);
+    if (!raw)
+      return { module: null, project: null };
+    const { module, project, expiresAt } = JSON.parse(raw) as { module: string; project: string; expiresAt: number };
+    if (Date.now() > expiresAt) {
+      localStorage.removeItem(CACHE_KEY);
+      return { module: null, project: null };
+    }
+    return { module: module ?? null, project: project ?? null };
+  } catch {
+    return { module: null, project: null };
+  }
+}
+
+function writeSelectionCache(module: string | null, project: string | null) {
+  if (!module) {
+    localStorage.removeItem(CACHE_KEY);
+    return;
+  }
+  localStorage.setItem(CACHE_KEY, JSON.stringify({ module, project, expiresAt: Date.now() + CACHE_TTL }));
+}
+
 export function MoulisPage() {
-  const [module, setModule] = useState<string | null>(null);
-  const [project, setProject] = useState<string | null>(null);
+  const [module, setModule] = useState<string | null>(() => readSelectionCache().module);
+  const [project, setProject] = useState<string | null>(() => readSelectionCache().project);
   const [selectedGroup, setSelectedGroup] = useState<string | null>(null);
+
+  useEffect(() => { writeSelectionCache(module, project); }, [module, project]);
   const [drawerOpened, { open: openDrawer, close: closeDrawer }] = useDisclosure(false);
   const [moduleSearch, setModuleSearch] = useState("");
   const [checked, setChecked] = useState<Set<string>>(new Set());
-  const [triggeringGroups, setTriggeringGroups] = useState<Set<string>>(new Set());
-  const [bulkLaunching, setBulkLaunching] = useState(false);
+
+  type PendingTrigger = { type: "group"; group: string } | { type: "selection" } | { type: "all" };
+  const [pendingTrigger, setPendingTrigger] = useState<PendingTrigger | null>(null);
+  const [triggerParamsOpen, { open: openTriggerParams, close: closeTriggerParams }] = useDisclosure(false);
+  const [triggerLoading, setTriggerLoading] = useState(false);
+  const [forcePollUntil, setForcePollUntil] = useState<number | null>(null);
 
   const qc = useQueryClient();
   const { data: modules, isLoading: loadingModules } = useMoulisModules();
   const { data: projects, isLoading: loadingProjects } = useMoulisProjects(module);
-  const { data: groups, isLoading: loadingGroups, refetch } = useMoulisGroups(module, project);
-  const triggerAllMut = useTriggerAll(module ?? "", project ?? "");
+  const { data: groups, isLoading: loadingGroups, refetch } = useMoulisGroups(module, project, forcePollUntil);
 
-  function invalidateGroups() {
-    setTimeout(() => qc.invalidateQueries({ queryKey: ["moulis", "groups", module, project] }), 3000);
+  function requestTrigger(trigger: PendingTrigger) {
+    setPendingTrigger(trigger);
+    openTriggerParams();
+  }
+
+  async function executeTrigger(params: TriggerParams) {
+    if (!module || !project || !pendingTrigger) return;
+    setTriggerLoading(true);
+    try {
+      if (pendingTrigger.type === "group") {
+        await apiTriggerGroup(module, project, pendingTrigger.group, params);
+        notifications.show({ message: "Build lancé", color: "green" });
+      } else if (pendingTrigger.type === "selection") {
+        await Promise.all([...checked].map((g) => apiTriggerGroup(module, project, g, params)));
+        notifications.show({ message: `${checked.size} build(s) lancé(s)`, color: "green" });
+        setChecked(new Set());
+      } else {
+        await apiTriggerAll(module, project, params);
+        notifications.show({ message: "Tous les builds lancés", color: "green" });
+      }
+      setForcePollUntil(Date.now() + 2 * 60 * 1000);
+      qc.invalidateQueries({ queryKey: ["moulis", "groups", module, project] });
+      closeTriggerParams();
+    } catch {
+      notifications.show({ message: "Échec du déclenchement", color: "red" });
+    } finally {
+      setTriggerLoading(false);
+    }
   }
 
   function handleRowClick(g: GroupSummary) {
@@ -263,43 +400,6 @@ export function MoulisPage() {
     e.stopPropagation();
     if (!groups) return;
     setChecked(checked.size === groups.length ? new Set() : new Set(groups.map((g) => g.group)));
-  }
-
-  async function handleTriggerOne(e: React.MouseEvent, group: string) {
-    e.stopPropagation();
-    if (!module || !project) return;
-    setTriggeringGroups((prev) => new Set([...prev, group]));
-    try {
-      await apiTriggerGroup(module, project, group);
-      notifications.show({ message: `Build lancé`, color: "green" });
-      invalidateGroups();
-    } catch {
-      notifications.show({ message: "Échec du déclenchement", color: "red" });
-    } finally {
-      setTriggeringGroups((prev) => { const next = new Set(prev); next.delete(group); return next; });
-    }
-  }
-
-  async function handleTriggerSelection() {
-    if (!module || !project) return;
-    setBulkLaunching(true);
-    try {
-      await Promise.all([...checked].map((g) => apiTriggerGroup(module, project, g)));
-      notifications.show({ message: `${checked.size} build(s) lancé(s)`, color: "green" });
-      setChecked(new Set());
-      invalidateGroups();
-    } catch {
-      notifications.show({ message: "Certains builds ont échoué", color: "orange" });
-    } finally {
-      setBulkLaunching(false);
-    }
-  }
-
-  function handleTriggerAll() {
-    triggerAllMut.mutate(undefined, {
-      onSuccess: () => notifications.show({ message: "Tous les builds lancés", color: "green" }),
-      onError: () => notifications.show({ message: "Échec du déclenchement", color: "red" }),
-    });
   }
 
   const filteredModules = (modules ?? []).filter((m) =>
@@ -368,8 +468,8 @@ export function MoulisPage() {
                     size="sm"
                     color="orange"
                     leftSection={<IconPlayerPlay size={14} />}
-                    loading={bulkLaunching}
-                    onClick={handleTriggerSelection}
+                    loading={triggerLoading && pendingTrigger?.type === "selection"}
+                    onClick={() => requestTrigger({ type: "selection" })}
                   >
                     Lancer sélection ({checked.size})
                   </Button>
@@ -379,8 +479,8 @@ export function MoulisPage() {
                   variant="light"
                   color="blue"
                   leftSection={<IconPlayerPlay size={14} />}
-                  loading={triggerAllMut.isPending}
-                  onClick={handleTriggerAll}
+                  loading={triggerLoading && pendingTrigger?.type === "all"}
+                  onClick={() => requestTrigger({ type: "all" })}
                 >
                   Lancer tous
                 </Button>
@@ -455,19 +555,24 @@ export function MoulisPage() {
                       {g.codingStyleInfractions === 0 ? "OK" : `${g.codingStyleInfractions} infraction(s)`}
                     </Badge>
                   </Table.Td>
-                  <Table.Td>
-                    {g.lastBuildAt
-                      ? <Text size="xs" c="dimmed">{new Date(g.lastBuildAt).toLocaleString("fr-FR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })}</Text>
-                      : <Text size="xs" c="dimmed">—</Text>
-                    }
+                  <Table.Td style={{ minWidth: rem(140) }}>
+                    {g.building ? (
+                      <BuildProgress startedAt={g.lastBuildAt} estimatedDuration={g.estimatedDuration} />
+                    ) : g.lastBuildAt ? (
+                      <Text size="xs" c="dimmed">
+                        {new Date(g.lastBuildAt).toLocaleString("fr-FR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })}
+                      </Text>
+                    ) : (
+                      <Text size="xs" c="dimmed">—</Text>
+                    )}
                   </Table.Td>
                   <Table.Td onClick={(e) => e.stopPropagation()}>
                     <Tooltip label="Lancer le build">
                       <ActionIcon
                         variant="subtle"
                         color="blue"
-                        loading={triggeringGroups.has(g.group)}
-                        onClick={(e) => handleTriggerOne(e, g.group)}
+                        loading={triggerLoading && pendingTrigger?.type === "group" && pendingTrigger.group === g.group}
+                        onClick={(e) => { e.stopPropagation(); requestTrigger({ type: "group", group: g.group }); }}
                       >
                         <IconPlayerPlay size={14} />
                       </ActionIcon>
@@ -487,9 +592,24 @@ export function MoulisPage() {
       <GroupModal
         opened={drawerOpened}
         onClose={closeDrawer}
+        onTriggerRequest={() => requestTrigger({ type: "group", group: selectedGroup ?? "" })}
         module={module ?? ""}
         project={project ?? ""}
         group={selectedGroup}
+      />
+
+      <TriggerParamsModal
+        opened={triggerParamsOpen}
+        onClose={closeTriggerParams}
+        onConfirm={executeTrigger}
+        title={
+          pendingTrigger?.type === "group"
+            ? `Lancer le build pour ${pendingTrigger.group}`
+            : pendingTrigger?.type === "selection"
+            ? `Lancer ${checked.size} build(s)`
+            : "Lancer tous les builds"
+        }
+        loading={triggerLoading}
       />
     </Stack>
   );
