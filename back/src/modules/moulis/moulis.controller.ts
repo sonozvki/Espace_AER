@@ -9,7 +9,6 @@ import {
   getGroupTrend,
   triggerAll,
   triggerGroup,
-  getRawBanana,
 } from "./moulis.service";
 
 export const moulisController = new Elysia({ prefix: "/moulis" })
@@ -54,12 +53,6 @@ export const moulisController = new Elysia({ prefix: "/moulis" })
       query: t.Object({ module: t.String(), project: t.String(), limit: t.Optional(t.String()) }),
       params: t.Object({ group: t.String() }),
     }
-  )
-
-  .get(
-    "/debug-banana",
-    async ({ query }) => getRawBanana(query.module, query.project, query.group),
-    { query: t.Object({ module: t.String(), project: t.String(), group: t.String() }) }
   )
 
   .post(

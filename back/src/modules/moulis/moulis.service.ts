@@ -152,19 +152,6 @@ export async function getGroupTrend(module: string, project: string, group: stri
     });
 }
 
-export async function getRawBanana(module: string, project: string, group: string): Promise<unknown> {
-  const resolved = await resolveInstancePath(module, project);
-  if (!resolved) return { error: "path not resolved" };
-  const path = `${resolved.instancePath}${jobPath(group)}/lastBuild/artifact/reports/banana-report.json`;
-  const text = await jGetText(path);
-  if (!text) return { error: "not found", path };
-  try {
-    return JSON.parse(text);
-  } catch {
-    return { raw: text };
-  }
-}
-
 export async function getModules(): Promise<string[]> {
   const data = await jGet<{ jobs: { name: string }[] }>("/api/json?tree=jobs[name]");
   if (!data) return [];
