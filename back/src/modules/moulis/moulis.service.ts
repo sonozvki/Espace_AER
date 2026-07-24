@@ -198,6 +198,7 @@ export async function getGroupSummaries(module: string, project: string): Promis
         jGet<{
           timestamp: number;
           building: boolean;
+          estimatedDuration: number;
           result: string | null;
           actions: { _class: string; failCount?: number; skipCount?: number; totalCount?: number }[];
         }>(`${buildBase}/api/json`),
@@ -207,7 +208,7 @@ export async function getGroupSummaries(module: string, project: string): Promis
       ]);
 
       if (!build) {
-        return { group, members, passCount: 0, failCount: 0, totalCount: 0, codingStyleMark: 0, codingStyleInfractions: 0, lastBuildAt: null, building: false, result: null };
+        return { group, members, passCount: 0, failCount: 0, totalCount: 0, codingStyleMark: 0, codingStyleInfractions: 0, lastBuildAt: null, estimatedDuration: null, building: false, result: null };
       }
 
       const testAction = build.actions.find((a) => a._class === "hudson.tasks.junit.TestResultAction");
@@ -224,6 +225,7 @@ export async function getGroupSummaries(module: string, project: string): Promis
         codingStyleMark: banana?.mark ?? 0,
         codingStyleInfractions: banana?.infractions?.length ?? 0,
         lastBuildAt: build.timestamp,
+        estimatedDuration: build.estimatedDuration > 0 ? build.estimatedDuration : null,
         building: build.building,
         result: build.result,
       };

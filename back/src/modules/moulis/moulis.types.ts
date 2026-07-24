@@ -16,6 +16,7 @@ export type GroupSummary = {
   codingStyleMark: number;
   codingStyleInfractions: number;
   lastBuildAt: number | null;
+  estimatedDuration: number | null;
   building: boolean;
   result: string | null;
 };
