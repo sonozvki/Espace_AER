@@ -32,6 +32,13 @@ export type TestSuite = {
   cases: TestCase[];
 };
 
+export type TriggerParams = {
+  visibility: "Private" | "Public";
+  delivery: "Git" | "Ramassage" | "Bttf";
+  force: boolean;
+  checkoutDatetime: string;
+};
+
 export type BuildTrend = {
   build: number;
   passed: number;

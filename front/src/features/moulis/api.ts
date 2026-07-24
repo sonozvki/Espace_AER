@@ -1,5 +1,5 @@
 import { apiFetch } from "@/lib/api";
-import type { GroupSummary, GroupDetail } from "./types";
+import type { GroupSummary, GroupDetail, TriggerParams } from "./types";
 
 export const fetchModules = () => apiFetch<string[]>("/api/moulis/modules");
 
@@ -21,8 +21,14 @@ export const fetchGroupTrend = (module: string, project: string, group: string) 
     `/api/moulis/groups/${encodeURIComponent(group)}/trend?module=${encodeURIComponent(module)}&project=${encodeURIComponent(project)}`
   );
 
-export const triggerAll =(module: string, project: string) =>
-  apiFetch<{ triggered: boolean }>(`/api/moulis/trigger?module=${encodeURIComponent(module)}&project=${encodeURIComponent(project)}`, { method: "POST" });
+const triggerInit = (params: TriggerParams): RequestInit => ({
+  method: "POST",
+  headers: { "Content-Type": "application/json" },
+  body: JSON.stringify(params),
+});
 
-export const triggerGroup = (module: string, project: string, group: string) =>
-  apiFetch<{ triggered: boolean }>(`/api/moulis/trigger/${encodeURIComponent(group)}?module=${encodeURIComponent(module)}&project=${encodeURIComponent(project)}`, { method: "POST" });
+export const triggerAll = (module: string, project: string, params: TriggerParams) =>
+  apiFetch<{ triggered: boolean }>(`/api/moulis/trigger?module=${encodeURIComponent(module)}&project=${encodeURIComponent(project)}`, triggerInit(params));
+
+export const triggerGroup = (module: string, project: string, group: string, params: TriggerParams) =>
+  apiFetch<{ triggered: boolean }>(`/api/moulis/trigger/${encodeURIComponent(group)}?module=${encodeURIComponent(module)}&project=${encodeURIComponent(project)}`, triggerInit(params));
