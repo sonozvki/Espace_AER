@@ -115,9 +115,9 @@ function GroupModal({
                   <YAxis tick={{ fontSize: 11 }} width={28} />
                   <ChartTooltip />
                   <Legend wrapperStyle={{ fontSize: 12 }} />
-                  <Area type="monotone" dataKey="Réussis" stackId="1" stroke="#40c057" fill="#40c057" fillOpacity={0.75} />
-                  <Area type="monotone" dataKey="Échoués" stackId="1" stroke="#fa5252" fill="#fa5252" fillOpacity={0.75} />
-                  <Area type="monotone" dataKey="Ignorés" stackId="1" stroke="#868e96" fill="#868e96" fillOpacity={0.6} />
+                  <Area type="monotone" dataKey="Réussis" stackId="1" stroke="#40c057" fill="#40c057" fillOpacity={0.75} isAnimationActive={false} />
+                  <Area type="monotone" dataKey="Échoués" stackId="1" stroke="#fa5252" fill="#fa5252" fillOpacity={0.75} isAnimationActive={false} />
+                  <Area type="monotone" dataKey="Ignorés" stackId="1" stroke="#868e96" fill="#868e96" fillOpacity={0.6} isAnimationActive={false} />
                 </AreaChart>
               </ResponsiveContainer>
             </>
