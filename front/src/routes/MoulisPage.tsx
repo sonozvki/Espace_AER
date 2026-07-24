@@ -511,7 +511,7 @@ export function MoulisPage() {
                   onClick={(e) => toggleAll(e)}
                 />
               </Table.Th>
-              <Table.Th>Membres</Table.Th>
+              <Table.Th style={{ width: 320 }}>Membres</Table.Th>
               <Table.Th>Tests</Table.Th>
               <Table.Th>Réussite</Table.Th>
               <Table.Th>Style</Table.Th>
