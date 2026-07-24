@@ -10,6 +10,14 @@ import {
   triggerAll,
   triggerGroup,
 } from "./moulis.service";
+import type { TriggerParams } from "./moulis.types";
+
+const triggerBody = t.Object({
+  visibility: t.Union([t.Literal("Private"), t.Literal("Public")]),
+  delivery: t.Union([t.Literal("Git"), t.Literal("Ramassage"), t.Literal("Bttf")]),
+  force: t.Boolean(),
+  checkoutDatetime: t.String(),
+});
 
 export const moulisController = new Elysia({ prefix: "/moulis" })
   .derive(async ({ cookie }) => {
@@ -57,23 +65,24 @@ export const moulisController = new Elysia({ prefix: "/moulis" })
 
   .post(
     "/trigger",
-    async ({ query }) => {
-      const ok = await triggerAll(query.module, query.project);
+    async ({ query, body }) => {
+      const ok = await triggerAll(query.module, query.project, body as TriggerParams);
       if (!ok) throw httpStatus(502, { error: "Échec du déclenchement Jenkins" });
       return { triggered: true };
     },
-    { query: t.Object({ module: t.String(), project: t.String() }) }
+    { query: t.Object({ module: t.String(), project: t.String() }), body: triggerBody }
   )
 
   .post(
     "/trigger/:group",
-    async ({ query, params }) => {
-      const ok = await triggerGroup(query.module, query.project, params.group);
+    async ({ query, params, body }) => {
+      const ok = await triggerGroup(query.module, query.project, params.group, body as TriggerParams);
       if (!ok) throw httpStatus(502, { error: "Échec du déclenchement Jenkins" });
       return { triggered: true };
     },
     {
       query: t.Object({ module: t.String(), project: t.String() }),
       params: t.Object({ group: t.String() }),
+      body: triggerBody,
     }
   );

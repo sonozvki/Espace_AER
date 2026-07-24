@@ -1,5 +1,5 @@
 import { schoolYear } from "@/lib/dates";
-import type { GroupSummary, GroupDetail, CodingStyleInfraction, TestSuite, BuildTrend } from "./moulis.types";
+import type { GroupSummary, GroupDetail, CodingStyleInfraction, TestSuite, BuildTrend, TriggerParams } from "./moulis.types";
 
 const JENKINS_URL = process.env["JENKINS_URL"] ?? "https://jenkins.epitest.eu";
 const JENKINS_USER = process.env["JENKINS_USER"] ?? "";
@@ -35,9 +35,24 @@ async function jGetText(path: string): Promise<string | null> {
 }
 
 async function getCrumb(): Promise<Record<string, string>> {
-  const data = await jGet<{ crumb: string; crumbRequestField: string }>("/crumbIssuer/api/json");
-  if (!data) return {};
-  return { [data.crumbRequestField]: data.crumb };
+  try {
+    const res = await fetch(`${JENKINS_URL}/crumbIssuer/api/json`, {
+      headers: { Authorization: `Basic ${AUTH}` },
+      redirect: "follow",
+    });
+    if (!res.ok) return {};
+    const data = await res.json() as { crumb: string; crumbRequestField: string };
+    const headers: Record<string, string> = { [data.crumbRequestField]: data.crumb };
+    // Réinjecter le cookie de session Jenkins si présent (crumb est bound à la session)
+    const setCookie = res.headers.get("set-cookie");
+    if (setCookie) {
+      const sessionCookie = setCookie.split(";")[0];
+      if (sessionCookie) headers["Cookie"] = sessionCookie;
+    }
+    return headers;
+  } catch {
+    return {};
+  }
 }
 
 function jobPath(...segments: string[]): string {
@@ -272,10 +287,17 @@ export async function getGroupDetail(module: string, project: string, group: str
   };
 }
 
-export async function triggerAll(module: string, project: string): Promise<boolean> {
-  const resolved = await resolveInstancePath(module, project);
-  if (!resolved || !resolved.triggerJobName) return false;
-  const path = `${resolved.yearPath}${jobPath(resolved.triggerJobName)}/build`;
+function buildParamsQs(params: TriggerParams): string {
+  const qs = new URLSearchParams({
+    VISIBILITY: params.visibility,
+    DELIVERY: params.delivery,
+    FORCE: String(params.force),
+  });
+  if (params.checkoutDatetime) qs.set("CHECKOUT_DELIVERY_DATETIME", params.checkoutDatetime);
+  return qs.toString();
+}
+
+async function postBuild(path: string): Promise<boolean> {
   const crumb = await getCrumb();
   try {
     const res = await fetch(`${JENKINS_URL}${path}`, {
@@ -289,19 +311,14 @@ export async function triggerAll(module: string, project: string): Promise<boole
   }
 }
 
-export async function triggerGroup(module: string, project: string, group: string): Promise<boolean> {
+export async function triggerAll(module: string, project: string, params: TriggerParams): Promise<boolean> {
+  const resolved = await resolveInstancePath(module, project);
+  if (!resolved || !resolved.triggerJobName) return false;
+  return postBuild(`${resolved.yearPath}${jobPath(resolved.triggerJobName)}/buildWithParameters?${buildParamsQs(params)}`);
+}
+
+export async function triggerGroup(module: string, project: string, group: string, params: TriggerParams): Promise<boolean> {
   const resolved = await resolveInstancePath(module, project);
   if (!resolved) return false;
-  const path = `${resolved.instancePath}${jobPath(group)}/build`;
-  const crumb = await getCrumb();
-  try {
-    const res = await fetch(`${JENKINS_URL}${path}`, {
-      method: "POST",
-      headers: { Authorization: `Basic ${AUTH}`, ...crumb },
-      redirect: "follow",
-    });
-    return res.status === 201 || res.status === 200;
-  } catch {
-    return false;
-  }
+  return postBuild(`${resolved.instancePath}${jobPath(group)}/buildWithParameters?${buildParamsQs(params)}`);
 }
