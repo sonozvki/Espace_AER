@@ -56,7 +56,7 @@ context.on("response", async (response) => {
     const parsed = JSON.parse(body);
     const preview = JSON.stringify(parsed).slice(0, 100);
     discovered.set(path, { status: response.status(), preview });
-    console.log(`✅ [${response.status()}] ${path}\n   ${preview}\n`);
+    console.log(`[O] [${response.status()}] ${path}\n   ${preview}\n`);
   } catch {
     // ignore
   }
@@ -74,7 +74,7 @@ for (const route of PAGES_TO_VISIT) {
     await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
     await page.waitForTimeout(1000);
   } catch (err) {
-    console.log(`   ⚠️  Timeout ou erreur sur ${route}`);
+    console.log(`   /!\  Timeout ou erreur sur ${route}`);
   }
 }
 

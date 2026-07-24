@@ -1,8 +1,10 @@
 import {
   Stack, Title, Text, Badge, Table, Group, ActionIcon, Loader, Center,
-  Paper, SimpleGrid, SegmentedControl, UnstyledButton, rem, Alert, Select,
+  SimpleGrid, SegmentedControl, UnstyledButton, rem, Alert, Select, Box,
 } from "@mantine/core";
 import { IconArrowLeft, IconChevronUp, IconChevronDown, IconSelector, IconAlertCircle } from "@tabler/icons-react";
+
+const MONO = '"IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace';
 import { useNavigate, useParams } from "react-router-dom";
 import { useStudentNotes } from "@/features/suivi/hooks";
 import { useEffect, useState } from "react";
@@ -99,12 +101,19 @@ function SortTh({ children, sortKey, active, dir, onSort }: {
   );
 }
 
-function StatCard({ label, value }: { label: string; value: string | number | null }) {
+function StatChip({ label, value, caption, accent }: { label: string; value: string; caption: string; accent?: boolean }) {
   return (
-    <Paper p="md" withBorder style={{ borderColor: "var(--epi-border)" }}>
-      <Text size="xs" c="dimmed" tt="uppercase" fw={600} mb={4}>{label}</Text>
-      <Text size="xl" fw={700}>{value ?? "—"}</Text>
-    </Paper>
+    <Box p="md" style={{ background: "rgba(0,0,0,0.28)" }}>
+      <Text size="xs" tt="uppercase" style={{ fontFamily: MONO, color: accent ? "rgba(130,255,130,0.85)" : "rgba(255,255,255,0.7)", letterSpacing: "0.15em" }}>
+        {label}_
+      </Text>
+      <Text fw={700} ff="Anton, sans-serif" c="white" mt={4} style={{ fontSize: "1.8rem", lineHeight: 1.1 }}>
+        {value}
+      </Text>
+      <Text size="xs" mt={4} style={{ fontFamily: MONO, color: "rgba(255,255,255,0.6)" }}>
+        {caption}
+      </Text>
+    </Box>
   );
 }
 
@@ -188,34 +197,61 @@ export function StudentNotesPage() {
     .filter((m) => m.grade && m.grade !== "-" && m.grade !== "Echec")
     .reduce((acc, m) => acc + (m.credits ?? 0), 0);
 
-  const projection = computeProjection(filteredModules, projectedGrades);
+  const filteredProjection = computeProjection(filteredModules, projectedGrades);
 
   return (
     <Stack gap="xl">
-      <Group>
-        <ActionIcon variant="subtle" onClick={() => navigate(-1)} size="lg">
+      <Box
+        p="xl"
+        style={{ background: "var(--epi-blue)", borderRadius: 8, position: "relative", overflow: "hidden" }}
+      >
+        <ActionIcon variant="transparent" color="white" onClick={() => navigate(-1)} mb="md" style={{ opacity: 0.8 }}>
           <IconArrowLeft size={20} />
         </ActionIcon>
-        <Stack gap={0}>
-          <Title order={2} ff="Anton, sans-serif">{name}</Title>
-          <Text size="sm" c="dimmed" ff="monospace">{decodedLogin}</Text>
-        </Stack>
-      </Group>
 
-      {student && (
-        <SimpleGrid cols={{ base: 2, sm: 4 }}>
-          <StatCard label="GPA" value={student.gpa !== null ? student.gpa.toFixed(2) : null} />
-          <StatCard label="Crédits totaux" value={student.credits} />
-          <StatCard label="Semestre actuel" value={student.semester !== null ? `S${student.semester}` : null} />
-          <Paper p="md" withBorder style={{ borderColor: "var(--mantine-color-green-5)" }}>
-            <Text size="xs" c="green" tt="uppercase" fw={600} mb={4}>Projection GPA</Text>
-            <Text size="xl" fw={700} c="green.7">
-              {projection.gpa !== null ? projection.gpa.toFixed(2) : "—"}
-            </Text>
-            <Text size="xs" c="dimmed" mt={2}>{projection.credits} crédits projetés</Text>
-          </Paper>
-        </SimpleGrid>
-      )}
+        <Text size="xs" style={{ fontFamily: MONO, color: "rgba(255,255,255,0.65)", letterSpacing: "0.2em" }}>
+          suivi étudiant_
+        </Text>
+        <Title
+          order={1}
+          ff="Anton, sans-serif"
+          tt="uppercase"
+          c="white"
+          mt={4}
+          style={{ fontSize: "clamp(1.8rem, 4vw, 3rem)", lineHeight: 1 }}
+        >
+          {name}
+        </Title>
+        <Text size="sm" mt={6} style={{ fontFamily: MONO, color: "rgba(255,255,255,0.55)" }}>
+          {decodedLogin}
+        </Text>
+
+        {student && (
+          <SimpleGrid cols={{ base: 2, sm: 4 }} mt="xl" spacing={2}>
+            <StatChip
+              label="GPA"
+              value={student.gpa !== null ? student.gpa.toFixed(2) : "—"}
+              caption="moyenne pondérée"
+            />
+            <StatChip
+              label="Crédits"
+              value={String(student.credits ?? "—")}
+              caption="acquis"
+            />
+            <StatChip
+              label="Semestre"
+              value={student.semester !== null ? `S${student.semester}` : "—"}
+              caption="en cours"
+            />
+            <StatChip
+              label="Projection GPA"
+              value={filteredProjection.gpa !== null ? filteredProjection.gpa.toFixed(2) : "—"}
+              caption={`${filteredProjection.credits} crédits${semFilter !== "all" ? ` · S${semFilter}` : " projetés"}`}
+              accent
+            />
+          </SimpleGrid>
+        )}
+      </Box>
 
       {isLoading && <Center py="xl"><Loader /></Center>}
 

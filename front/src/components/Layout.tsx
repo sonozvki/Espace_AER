@@ -5,7 +5,7 @@ import { Outlet, useNavigate, useLocation, Navigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { BASE_URL } from "@/lib/api";
 
-const NAV_ITEMS = [
+const BASE_NAV_ITEMS = [
   { path: "/dashboard", label: "Tableau de bord" },
   { path: "/memos", label: "Mémos" },
   { path: "/guards", label: "Gardes" },
@@ -70,7 +70,11 @@ export function Layout() {
       </AppShell.Header>
 
       <AppShell.Navbar p="xs" bg="var(--epi-panel)" style={{ borderRight: "1px solid var(--epi-border)" }}>
-        {NAV_ITEMS.map((item) => (
+        {[
+          ...BASE_NAV_ITEMS.slice(0, 5),
+          ...(user?.hasEpitechToken ? [{ path: "/moulis", label: "Moulis" }] : []),
+          ...BASE_NAV_ITEMS.slice(5),
+        ].map((item) => (
           <NavLink
             key={item.path}
             label={item.label}

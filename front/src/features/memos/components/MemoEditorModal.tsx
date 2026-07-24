@@ -5,17 +5,6 @@ import MDEditor from "@uiw/react-md-editor";
 import remarkBreaks from "remark-breaks";
 import { useMemo, useCreateMemo, useUpdateMemo } from "../hooks";
 
-// autre template
-// | Jour        | AER |
-// |-------------|-----|
-// | Lundi       |     |
-// | Mardi       |     |
-// | Mercredi    |     |
-// | Jeudi       |     |
-// | Vendredi    |     |
-// | Samedi      |     |
-
-
 const DEFAULT_TEMPLATE = `## Les gardes
 
 - Lundi :
