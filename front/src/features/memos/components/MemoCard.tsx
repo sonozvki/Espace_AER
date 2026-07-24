@@ -41,11 +41,7 @@ export function MemoCard({ memo, onClick, onDelete }: Props) {
           <Text size="xs" c="dimmed">
             {formatDate(memo.createdAt)}
           </Text>
-          {previewText(memo.content) && (
-            <Text size="xs" c="dimmed" lineClamp={1}>
-              {previewText(memo.content)}
-            </Text>
-          )}
+          {(() => { const p = previewText(memo.content); return p ? <Text size="xs" c="dimmed" lineClamp={1}>{p}</Text> : null; })()}
         </Stack>
         <ActionIcon
           variant="subtle"

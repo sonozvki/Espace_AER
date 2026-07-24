@@ -28,10 +28,6 @@ export const guardsRepository = {
     return prisma.guard.findUnique({ where: { id }, include: GUARD_INCLUDE });
   },
 
-  findByDate(date: Date) {
-    return prisma.guard.findUnique({ where: { date }, include: GUARD_INCLUDE });
-  },
-
   async upsertMany(guards: GuardInput[]) {
     const results = await prisma.$transaction(
       guards.map((g) =>

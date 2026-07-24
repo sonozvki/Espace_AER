@@ -11,7 +11,11 @@ import { router } from "@/router";
 
 const queryClient = new QueryClient({
   defaultOptions: {
-    queries: { retry: 1, staleTime: 30_000 },
+    queries: {
+      retry: 1,
+      staleTime: 2 * 60 * 1000,
+      refetchOnWindowFocus: false,
+    },
   },
 });
 
