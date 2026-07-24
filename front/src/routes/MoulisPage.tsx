@@ -1,7 +1,7 @@
 import {
   Stack, Title, Select, Group, Table, Text, Badge, Loader, Center, Button,
   Modal, Progress, Accordion, Code, Divider, ActionIcon, Tooltip, rem, ScrollArea,
-  Checkbox,
+  Checkbox, TextInput,
 } from "@mantine/core";
 import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip as ChartTooltip, Legend, ResponsiveContainer,
@@ -10,7 +10,7 @@ import { useDisclosure } from "@mantine/hooks";
 import { notifications } from "@mantine/notifications";
 import { useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { IconPlayerPlay, IconRefresh, IconCheck, IconX } from "@tabler/icons-react";
+import { IconPlayerPlay, IconRefresh, IconCheck, IconX, IconSearch } from "@tabler/icons-react";
 import {
   useMoulisModules,
   useMoulisProjects,
@@ -229,6 +229,7 @@ export function MoulisPage() {
   const [project, setProject] = useState<string | null>(null);
   const [selectedGroup, setSelectedGroup] = useState<string | null>(null);
   const [drawerOpened, { open: openDrawer, close: closeDrawer }] = useDisclosure(false);
+  const [moduleSearch, setModuleSearch] = useState("");
   const [checked, setChecked] = useState<Set<string>>(new Set());
   const [triggeringGroups, setTriggeringGroups] = useState<Set<string>>(new Set());
   const [bulkLaunching, setBulkLaunching] = useState(false);
@@ -301,7 +302,9 @@ export function MoulisPage() {
     });
   }
 
-  const moduleOptions = (modules ?? []).map((m) => ({ value: m, label: m }));
+  const filteredModules = (modules ?? []).filter((m) =>
+    m.toLowerCase().includes(moduleSearch.toLowerCase())
+  );
   const projectOptions = (projects ?? []).map((p) => ({ value: p, label: p }));
   const allChecked = !!groups && groups.length > 0 && checked.size === groups.length;
   const indeterminate = checked.size > 0 && !allChecked;
@@ -310,62 +313,82 @@ export function MoulisPage() {
     <Stack gap="xl">
       <Title order={2} ff="Anton, sans-serif">Moulis</Title>
 
-      <Group align="flex-end" wrap="wrap">
+      <Stack gap="sm">
+        {/* Module picker */}
         {loadingModules ? <Loader size="sm" /> : (
-          <Select
-            label="Module"
-            placeholder="Choisir un module…"
-            data={moduleOptions}
-            value={module}
-            onChange={(v) => { setModule(v); setProject(null); setChecked(new Set()); }}
-            w={200}
-            searchable
-          />
-        )}
-        {module && (
-          loadingProjects ? <Loader size="sm" /> : (
-            <Select
-              label="Projet"
-              placeholder="Choisir un projet…"
-              data={projectOptions}
-              value={project}
-              onChange={(v) => { setProject(v); setChecked(new Set()); }}
+          <Stack gap="xs">
+            <TextInput
+              placeholder="Filtrer les modules…"
+              value={moduleSearch}
+              onChange={(e) => setModuleSearch(e.currentTarget.value)}
+              leftSection={<IconSearch size={13} />}
+              size="xs"
               w={200}
-              searchable
             />
-          )
+            <Group gap={6} wrap="wrap">
+              {filteredModules.map((m) => (
+                <Button
+                  key={m}
+                  size="xs"
+                  variant={module === m ? "filled" : "default"}
+                  color={module === m ? "epitech" : undefined}
+                  onClick={() => { setModule(m); setProject(null); setChecked(new Set()); }}
+                  styles={{ root: { fontFamily: "monospace", letterSpacing: "0.02em" } }}
+                >
+                  {m}
+                </Button>
+              ))}
+            </Group>
+          </Stack>
         )}
-        {groups && groups.length > 0 && (
-          <Group gap="xs" style={{ marginTop: "auto" }}>
-            <Tooltip label="Rafraîchir">
-              <ActionIcon variant="subtle" onClick={() => refetch()}>
-                <IconRefresh size={16} />
-              </ActionIcon>
-            </Tooltip>
-            {checked.size > 0 && (
-              <Button
-                size="sm"
-                color="orange"
-                leftSection={<IconPlayerPlay size={14} />}
-                loading={bulkLaunching}
-                onClick={handleTriggerSelection}
-              >
-                Lancer sélection ({checked.size})
-              </Button>
+
+        {/* Projet + actions */}
+        {module && (
+          <Group align="flex-end" gap="sm">
+            {loadingProjects ? <Loader size="sm" /> : (
+              <Select
+                label="Projet"
+                placeholder="Choisir un projet…"
+                data={projectOptions}
+                value={project}
+                onChange={(v) => { setProject(v); setChecked(new Set()); }}
+                w={200}
+                searchable
+              />
             )}
-            <Button
-              size="sm"
-              variant="light"
-              color="blue"
-              leftSection={<IconPlayerPlay size={14} />}
-              loading={triggerAllMut.isPending}
-              onClick={handleTriggerAll}
-            >
-              Lancer tous
-            </Button>
+            {groups && groups.length > 0 && (
+              <Group gap="xs">
+                <Tooltip label="Rafraîchir">
+                  <ActionIcon variant="subtle" onClick={() => refetch()}>
+                    <IconRefresh size={16} />
+                  </ActionIcon>
+                </Tooltip>
+                {checked.size > 0 && (
+                  <Button
+                    size="sm"
+                    color="orange"
+                    leftSection={<IconPlayerPlay size={14} />}
+                    loading={bulkLaunching}
+                    onClick={handleTriggerSelection}
+                  >
+                    Lancer sélection ({checked.size})
+                  </Button>
+                )}
+                <Button
+                  size="sm"
+                  variant="light"
+                  color="blue"
+                  leftSection={<IconPlayerPlay size={14} />}
+                  loading={triggerAllMut.isPending}
+                  onClick={handleTriggerAll}
+                >
+                  Lancer tous
+                </Button>
+              </Group>
+            )}
           </Group>
         )}
-      </Group>
+      </Stack>
 
       {loadingGroups && (
         <Center py="xl">
