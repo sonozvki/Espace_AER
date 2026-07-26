@@ -95,7 +95,8 @@ export async function fetchIntra<T>(cookie: string, path: string): Promise<T> {
     throw new EpitechUpstreamError();
   }
 
-  const text = await res.text();
+  const bytes = await res.arrayBuffer();
+  const text = new TextDecoder("utf-8").decode(bytes);
   try {
     return JSON.parse(text) as T;
   } catch {
