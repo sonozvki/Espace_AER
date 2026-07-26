@@ -46,11 +46,11 @@ export function MemosPage() {
   return (
     <>
       <Stack gap="md">
-        <Group justify="space-between">
+        <Group justify="space-between" wrap="wrap" gap="sm">
           <Title order={2} ff="Anton, sans-serif">
             Mémos
           </Title>
-          <Group gap="sm">
+          <Group gap="xs" wrap="nowrap">
             <SegmentedControl
               size="xs"
               value={viewMode}
@@ -60,8 +60,8 @@ export function MemosPage() {
                 { value: "calendar", label: <Group gap={4} wrap="nowrap"><IconCalendar size={14} /><span>Calendrier</span></Group> },
               ]}
             />
-            <Button leftSection={<IconPlus size={16} />} onClick={() => setEditorOpen(true)}>
-              Nouveau mémo
+            <Button size="sm" leftSection={<IconPlus size={14} />} onClick={() => setEditorOpen(true)}>
+              Nouveau
             </Button>
           </Group>
         </Group>

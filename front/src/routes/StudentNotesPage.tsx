@@ -258,12 +258,14 @@ export function StudentNotesPage() {
       {notes && !isLoading && (
         <Stack gap="md">
           {semOptions.length > 1 && (
-            <SegmentedControl
-              value={semFilter}
-              onChange={setSemFilter}
-              data={semOptions}
-              w="fit-content"
-            />
+            <div style={{ overflowX: "auto" }}>
+              <SegmentedControl
+                value={semFilter}
+                onChange={setSemFilter}
+                data={semOptions}
+                w="fit-content"
+              />
+            </div>
           )}
 
           {sorted.length > 0 ? (
@@ -271,18 +273,19 @@ export function StudentNotesPage() {
               <Text size="sm" c="dimmed">
                 {acquiredCredits} crédits acquis sur {totalCredits}
               </Text>
+              <div style={{ overflowX: "auto" }}>
               <Table withTableBorder withColumnBorders striped highlightOnHover>
                 <Table.Thead>
                   <Table.Tr>
                     <SortTh sortKey="title" active={sortKey} dir={sortDir} onSort={handleSort}>Titre</SortTh>
                     <SortTh sortKey="grade" active={sortKey} dir={sortDir} onSort={handleSort}>Grade</SortTh>
-                    <Table.Th style={{ width: 120 }}>
+                    <Table.Th style={{ width: 120 }} visibleFrom="sm">
                       <Text size="sm" fw={600}>Projection</Text>
                     </Table.Th>
                     <SortTh sortKey="credits" active={sortKey} dir={sortDir} onSort={handleSort}>Crédits</SortTh>
-                    <SortTh sortKey="scolaryear" active={sortKey} dir={sortDir} onSort={handleSort}>Année</SortTh>
-                    <Table.Th>Code module</Table.Th>
-                    <Table.Th>Cycle</Table.Th>
+                    <Table.Th visibleFrom="sm">Code module</Table.Th>
+                    <Table.Th visibleFrom="md">Année</Table.Th>
+                    <Table.Th visibleFrom="md">Cycle</Table.Th>
                   </Table.Tr>
                 </Table.Thead>
                 <Table.Tbody>
@@ -300,7 +303,7 @@ export function StudentNotesPage() {
                               </Badge>
                             : <Text size="sm" c="dimmed">—</Text>}
                         </Table.Td>
-                        <Table.Td style={{ width: 120 }}>
+                        <Table.Td style={{ width: 120 }} visibleFrom="sm">
                           <Select
                             size="xs"
                             value={projGrade}
@@ -314,14 +317,15 @@ export function StudentNotesPage() {
                           />
                         </Table.Td>
                         <Table.Td><Text size="sm">{m.credits ?? "—"}</Text></Table.Td>
-                        <Table.Td><Text size="sm">{m.scolaryear ?? "—"}</Text></Table.Td>
-                        <Table.Td><Text size="sm" ff="monospace" c="dimmed">{m.codemodule}</Text></Table.Td>
-                        <Table.Td><Text size="sm" c="dimmed">{m.cycle ?? "—"}</Text></Table.Td>
+                        <Table.Td visibleFrom="sm"><Text size="sm" ff="monospace" c="dimmed">{m.codemodule}</Text></Table.Td>
+                        <Table.Td visibleFrom="md"><Text size="sm">{m.scolaryear ?? "—"}</Text></Table.Td>
+                        <Table.Td visibleFrom="md"><Text size="sm" c="dimmed">{m.cycle ?? "—"}</Text></Table.Td>
                       </Table.Tr>
                     );
                   })}
                 </Table.Tbody>
               </Table>
+              </div>
             </>
           ) : (
             <Text c="dimmed" ta="center" py="xl">Aucun module pour ce filtre.</Text>
