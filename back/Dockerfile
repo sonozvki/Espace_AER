@@ -11,4 +11,4 @@ CMD ["bun", "--hot", "src/server.ts"]
 
 FROM base AS prod
 EXPOSE 8081
-CMD ["sh", "-c", "./node_modules/.bin/prisma migrate deploy && bun src/server.ts"]
+CMD ["sh", "-c", "bunx prisma migrate deploy && bun src/server.ts"]
