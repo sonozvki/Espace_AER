@@ -1,6 +1,6 @@
 export function schoolYear(): number {
   const now = new Date();
-  return now.getMonth() < 8 ? now.getFullYear() - 1 : now.getFullYear();
+  return now.getMonth() < 9 ? now.getFullYear() - 1 : now.getFullYear();
 }
 
 export function startOfDay(date: Date): Date {

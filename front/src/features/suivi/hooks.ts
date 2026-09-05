@@ -3,19 +3,19 @@ import { suiviApi } from "./api";
 
 const INTRA_STALE = 30 * 60 * 1000; // 30 min pr fetch les données Epitech (c lent)
 
-export function useIntraPromos(location = "FR/NCE", year?: number) {
+export function useIntraPromos(location = "FR/NCE") {
   return useQuery({
-    queryKey: ["suivi", "promos", location, year],
-    queryFn: () => suiviApi.promos(location, year),
+    queryKey: ["suivi", "promos", location],
+    queryFn: () => suiviApi.promos(location),
     staleTime: INTRA_STALE,
     retry: false,
   });
 }
 
-export function useIntraStudents(promo: string | null, location = "FR/NCE", year?: number) {
+export function useIntraStudents(promo: string | null, location = "FR/NCE") {
   return useQuery({
-    queryKey: ["suivi", "students", promo, location, year],
-    queryFn: () => suiviApi.students(promo!, location, year),
+    queryKey: ["suivi", "students", promo, location],
+    queryFn: () => suiviApi.students(promo!, location),
     enabled: !!promo,
     staleTime: INTRA_STALE,
     retry: false,

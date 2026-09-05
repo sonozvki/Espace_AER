@@ -7,18 +7,20 @@ const SYNC_INTERVAL_MS = 4 * 60 * 60 * 1000; // 4h
 async function syncStudents() {
   const user = await prisma.user.findFirst({
     where: { epitechToken: { not: null } },
-    select: { id: true },
+    select: { id: true, email: true, epitechToken: true },
   });
-  if (!user) return;
+  if (!user) { console.log("[sync-students] no user with token, skipping"); return; }
+  console.log(`[sync-students] using user id=${user.id} email=${user.email} token_prefix=${user.epitechToken?.slice(0, 20)}`);
 
   for (const location of LOCATIONS) {
     let promos: string[];
     try {
       promos = await getIntraPromos(user.id, location);
-    } catch {
-      console.error(`[sync-students] failed to fetch promos for ${location}`);
+    } catch (e) {
+      console.error(`[sync-students] failed to fetch promos for ${location}:`, e);
       continue;
     }
+    console.log(`[sync-students] ${promos.length} promo(s) found for ${location}:`, promos);
 
     for (const promo of promos) {
       try {

@@ -45,11 +45,7 @@ export const epitechController = new Elysia({ prefix: "/epitech" })
     "/intra/promos",
     async ({ session, query }) => {
       try {
-        return await getIntraPromos(
-          Number(session.sub),
-          query.location ?? "FR/NCE",
-          query.year ? Number(query.year) : undefined
-        );
+        return await getIntraPromos(Number(session.sub), query.location ?? "FR/NCE");
       } catch (err) {
         return handleEpitechError(err);
       }
@@ -57,7 +53,6 @@ export const epitechController = new Elysia({ prefix: "/epitech" })
     {
       query: t.Object({
         location: t.Optional(t.String()),
-        year: t.Optional(t.String()),
       }),
     }
   )
@@ -68,17 +63,11 @@ export const epitechController = new Elysia({ prefix: "/epitech" })
       const location = query.location ?? "FR/NCE";
       const promo = query.promo;
 
-      // Lire depuis le cache d'abord
       const cached = await getStudentsFromCache(promo, location);
       if (cached.length > 0) return cached;
 
-      // Cache vide → live fetch + on alimente le cache pour la prochaine fois
       try {
-        const students = await getIntraStudents(Number(session.sub), {
-          location,
-          year: query.year ? Number(query.year) : undefined,
-          promo,
-        });
+        const students = await getIntraStudents(Number(session.sub), { location, promo });
         saveStudentsToCache(students, promo, location).catch(() => {});
         return students;
       } catch (err) {
@@ -89,7 +78,6 @@ export const epitechController = new Elysia({ prefix: "/epitech" })
       query: t.Object({
         promo: t.String(),
         location: t.Optional(t.String()),
-        year: t.Optional(t.String()),
       }),
     }
   )

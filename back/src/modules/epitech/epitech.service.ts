@@ -110,10 +110,9 @@ async function intraCookieFetch<T>(userId: number, path: string): Promise<T> {
 
 export async function getIntraPromos(
   userId: number,
-  location = "FR/NCE",
-  year?: number
+  location = "FR/NCE"
 ): Promise<string[]> {
-  const path = `/user/filter/promo?format=json&location=${location}&year=${year ?? schoolYear()}&active=true`;
+  const path = `/user/filter/promo?format=json&location=${location}&year=${schoolYear()}&active=true`;
   const data = await intraCookieFetch<unknown>(userId, path);
   if (!Array.isArray(data)) return [];
   return data.map((d) => (typeof d === "string" ? d : String((d as Record<string, unknown>)["promo"] ?? (d as Record<string, unknown>)["code"] ?? d)));
@@ -121,18 +120,15 @@ export async function getIntraPromos(
 
 export async function getIntraStudents(
   userId: number,
-  params: { location: string; year?: number; promo: string }
+  params: { location: string; promo: string }
 ): Promise<IntraStudent[]> {
-  // Ne pas encoder les slashes (location FR/NCE, promo bachelor/classic)
-  const path = `/user/filter/user?format=json&location=${params.location}&year=${params.year ?? schoolYear()}&active=true&promo=${params.promo}&offset=0`;
+  const path = `/user/filter/user?format=json&location=${params.location}&year=${schoolYear()}&active=true&promo=${params.promo}&offset=0`;
 
-  // Un seul fetch de cookie pour tous les appels parallèles
   const cookie = await getUserCookie(userId);
   const list = await fetchIntra<{ items?: Record<string, unknown>[]; total?: number }>(cookie, path);
   const students = list.items ?? [];
 
-  const year = schoolYear();
-  const netsoulStart = `${year}-09-25`;
+  const netsoulStart = `${schoolYear()}-09-25`;
   const netsoulEnd = new Date().toISOString().slice(0, 10);
 
   const enriched = await Promise.all(

@@ -36,17 +36,11 @@ export type IntraStudentNotes = {
 };
 
 export const suiviApi = {
-  promos: (location = "FR/NCE", year?: number) => {
-    const qs = new URLSearchParams({ location });
-    if (year) qs.set("year", String(year));
-    return apiFetch<string[]>(`/api/epitech/intra/promos?${qs}`);
-  },
+  promos: (location = "FR/NCE") =>
+    apiFetch<string[]>(`/api/epitech/intra/promos?${new URLSearchParams({ location })}`),
 
-  students: (promo: string, location = "FR/NCE", year?: number) => {
-    const qs = new URLSearchParams({ promo, location });
-    if (year) qs.set("year", String(year));
-    return apiFetch<IntraStudent[]>(`/api/epitech/intra/students?${qs}`);
-  },
+  students: (promo: string, location = "FR/NCE") =>
+    apiFetch<IntraStudent[]>(`/api/epitech/intra/students?${new URLSearchParams({ promo, location })}`),
 
   studentNotes: (login: string) =>
     apiFetch<IntraStudentNotes>(`/api/epitech/intra/student/${encodeURIComponent(login)}/notes`),
