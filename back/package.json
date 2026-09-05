@@ -12,8 +12,8 @@
   "dependencies": {
     "@elysiajs/cors": "latest",
     "@elysiajs/eden": "latest",
-    "@prisma/adapter-pg": "latest",
-    "@prisma/client": "latest",
+    "@prisma/adapter-pg": "^6",
+    "@prisma/client": "^6",
     "arctic": "latest",
     "elysia": "latest",
     "jose": "latest",
@@ -25,7 +25,7 @@
     "@types/bun": "latest",
     "@types/node": "latest",
     "@types/pg": "latest",
-    "prisma": "latest",
+    "prisma": "^6",
     "typescript": "^5"
   }
 }
