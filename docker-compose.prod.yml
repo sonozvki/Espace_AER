@@ -45,7 +45,7 @@ services:
     labels:
       - "traefik.enable=true"
       - "traefik.docker.network=traefik-net"
-      - "traefik.http.routers.aer-backend.rule=Host(`espace-aer-nice.duckdns.org`) && (PathPrefix(`/auth`) || PathPrefix(`/api`))"
+      - "traefik.http.routers.aer-backend.rule=Host(`espace-aer.nice-tek.eu`) && (PathPrefix(`/auth`) || PathPrefix(`/api`))"
       - "traefik.http.routers.aer-backend.entrypoints=websecure"
       - "traefik.http.routers.aer-backend.tls.certresolver=letsencrypt"
       - "traefik.http.routers.aer-backend.priority=10"
@@ -65,7 +65,7 @@ services:
     labels:
       - "traefik.enable=true"
       - "traefik.docker.network=traefik-net"
-      - "traefik.http.routers.aer-frontend.rule=Host(`espace-aer-nice.duckdns.org`)"
+      - "traefik.http.routers.aer-frontend.rule=Host(`espace-aer.nice-tek.eu`)"
       - "traefik.http.routers.aer-frontend.entrypoints=websecure"
       - "traefik.http.routers.aer-frontend.tls.certresolver=letsencrypt"
       - "traefik.http.routers.aer-frontend.priority=1"
