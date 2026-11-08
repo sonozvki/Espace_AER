@@ -7,6 +7,9 @@ export type AuthUser = {
   name: string;
   role: "ADMIN";
   hasEpitechToken: boolean;
+  aerSince: number | null;
+  /** false si l'AER est sorti des générations actives : plus de gardes ni de stats */
+  isActiveAer: boolean;
 };
 
 export function useAuth() {

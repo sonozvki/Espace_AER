@@ -6,6 +6,7 @@ import { httpStatus } from "@/lib/http";
 import { addToWhitelist, removeFromWhitelist } from "@/auth/whitelist";
 import { encrypt } from "@/lib/crypto";
 import { z } from "zod";
+import { getCurrentYear, isActiveAer } from "@/modules/school-year/school-year.service";
 
 const WhitelistBodySchema = z.object({
   email: z.email(),
@@ -30,7 +31,7 @@ export const authController = new Elysia({ prefix: "/auth" })
       const devUser = await prisma.user.upsert({
         where: { email: "dev@aer.local" },
         update: {},
-        create: { email: "dev@aer.local", name: "Dev AER", role: "ADMIN" },
+        create: { email: "dev@aer.local", name: "Dev AER", role: "ADMIN", aerSince: await getCurrentYear() },
       });
       const token = await createSession(devUser);
       cookie[COOKIE]!.set(sessionCookieOptions(token));
@@ -87,6 +88,8 @@ export const authController = new Elysia({ prefix: "/auth" })
       name: user.name,
       role: user.role,
       hasEpitechToken: !!user.epitechToken,
+      aerSince: user.aerSince,
+      isActiveAer: isActiveAer(user.aerSince, await getCurrentYear()),
     };
   })
 
@@ -121,10 +124,12 @@ export const authController = new Elysia({ prefix: "/auth" })
     const session = await getSession(cookie);
     if (!session) return httpStatus(401, { error: "Non authentifié" });
     if (session.role !== "ADMIN") return httpStatus(403, { error: "Accès refusé" });
-    return prisma.user.findMany({
-      select: { id: true, name: true, email: true, role: true },
+    const year = await getCurrentYear();
+    const users = await prisma.user.findMany({
+      select: { id: true, name: true, email: true, role: true, aerSince: true },
       orderBy: { name: "asc" },
     });
+    return users.map((u) => ({ ...u, active: isActiveAer(u.aerSince, year) }));
   })
 
   .get("/whitelist", async ({ cookie }) => {

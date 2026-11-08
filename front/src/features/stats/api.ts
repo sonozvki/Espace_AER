@@ -30,8 +30,10 @@ export type AerActivityStat = {
   activities: AerActivityItem[] | null;
 };
 
+const yearQs = (year?: number) => (year ? `?year=${year}` : "");
+
 export const statsApi = {
-  guards: () => apiFetch<GuardStat[]>("/api/stats/guards"),
-  netsoul: () => apiFetch<AerNetsoulStat[]>("/api/stats/netsoul"),
-  activities: () => apiFetch<AerActivityStat[]>("/api/stats/activities"),
+  guards: (year?: number) => apiFetch<GuardStat[]>(`/api/stats/guards${yearQs(year)}`),
+  netsoul: (year?: number) => apiFetch<AerNetsoulStat[]>(`/api/stats/netsoul${yearQs(year)}`),
+  activities: (year?: number) => apiFetch<AerActivityStat[]>(`/api/stats/activities${yearQs(year)}`),
 };

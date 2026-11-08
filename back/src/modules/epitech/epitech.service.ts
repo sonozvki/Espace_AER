@@ -1,6 +1,7 @@
 import { prisma } from "@/db/prisma";
 import { decrypt } from "@/lib/crypto";
-import { schoolYear } from "@/lib/dates";
+import { isoDay } from "@/lib/dates";
+import { getCurrentSchoolYear } from "@/modules/school-year/school-year.service";
 
 const INTRA_BASE = "https://intra.epitech.eu";
 
@@ -112,7 +113,8 @@ export async function getIntraPromos(
   userId: number,
   location = "FR/NCE"
 ): Promise<string[]> {
-  const path = `/user/filter/promo?format=json&location=${location}&year=${schoolYear()}&active=true`;
+  const { year } = await getCurrentSchoolYear();
+  const path = `/user/filter/promo?format=json&location=${location}&year=${year}&active=true`;
   const data = await intraCookieFetch<unknown>(userId, path);
   if (!Array.isArray(data)) return [];
   return data.map((d) => (typeof d === "string" ? d : String((d as Record<string, unknown>)["promo"] ?? (d as Record<string, unknown>)["code"] ?? d)));
@@ -122,13 +124,14 @@ export async function getIntraStudents(
   userId: number,
   params: { location: string; promo: string }
 ): Promise<IntraStudent[]> {
-  const path = `/user/filter/user?format=json&location=${params.location}&year=${schoolYear()}&active=true&promo=${params.promo}&offset=0`;
+  const { year, startDate } = await getCurrentSchoolYear();
+  const path = `/user/filter/user?format=json&location=${params.location}&year=${year}&active=true&promo=${params.promo}&offset=0`;
 
   const cookie = await getUserCookie(userId);
   const list = await fetchIntra<{ items?: Record<string, unknown>[]; total?: number }>(cookie, path);
   const students = list.items ?? [];
 
-  const netsoulStart = `${schoolYear()}-09-25`;
+  const netsoulStart = isoDay(startDate);
   const netsoulEnd = new Date().toISOString().slice(0, 10);
 
   const enriched = await Promise.all(
@@ -188,15 +191,44 @@ export async function getStudentsFromCache(promo: string, location: string): Pro
   }));
 }
 
+export async function getCachedPromos(location: string): Promise<string[]> {
+  const rows = await prisma.studentCache.findMany({
+    where: { location },
+    distinct: ["promo"],
+    select: { promo: true },
+  });
+  return rows.map((r) => r.promo);
+}
+
+/**
+ * Le trombi est la référence : un étudiant déjà connu (login + location) garde sa promo
+ * (décalée à chaque passage d'année) et seules ses stats sont rafraîchies. Évite que
+ * l'intra, qui n'est plus mis à jour, ne recrée l'étudiant dans son ancienne promo.
+ */
 export async function saveStudentsToCache(students: IntraStudent[], promo: string, location: string): Promise<void> {
+  if (students.length === 0) return;
+  const existing = await prisma.studentCache.findMany({
+    where: { location, login: { in: students.map((s) => s.login) } },
+    select: { id: true, login: true },
+  });
+  const idByLogin = new Map(existing.map((e) => [e.login, e.id]));
+
   await prisma.$transaction(
-    students.map((s) =>
-      prisma.studentCache.upsert({
-        where: { login_promo_location: { login: s.login, promo, location } },
-        create: { login: s.login, promo, location, firstName: s.firstName, lastName: s.lastName, semester: s.semester, gpa: s.gpa, credits: s.credits, netsoulHours: s.netsoulHours, syncedAt: new Date() },
-        update: { firstName: s.firstName, lastName: s.lastName, semester: s.semester, gpa: s.gpa, credits: s.credits, netsoulHours: s.netsoulHours, syncedAt: new Date() },
-      })
-    )
+    students.map((s) => {
+      const data = {
+        firstName: s.firstName,
+        lastName: s.lastName,
+        semester: s.semester,
+        gpa: s.gpa,
+        credits: s.credits,
+        netsoulHours: s.netsoulHours,
+        syncedAt: new Date(),
+      };
+      const id = idByLogin.get(s.login);
+      return id !== undefined
+        ? prisma.studentCache.update({ where: { id }, data })
+        : prisma.studentCache.create({ data: { ...data, login: s.login, promo, location } });
+    })
   );
 }
 

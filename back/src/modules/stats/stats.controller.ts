@@ -1,8 +1,15 @@
-import { Elysia } from "elysia";
+import { Elysia, t } from "elysia";
 import { verifySession, COOKIE } from "@/auth/session";
 import { httpStatus } from "@/lib/http";
 import { getGuardStats, getAerNetsoulStats, getAerActivityStats } from "./stats.service";
 import { EpitechTokenMissingError } from "@/modules/epitech/epitech.service";
+
+const yearQuery = t.Object({ year: t.Optional(t.String()) });
+
+function parseYear(raw: string | undefined): number | undefined {
+  const n = Number(raw);
+  return raw && Number.isInteger(n) ? n : undefined;
+}
 
 export const statsController = new Elysia({ prefix: "/stats" })
   .derive(async ({ cookie }) => {
@@ -11,19 +18,15 @@ export const statsController = new Elysia({ prefix: "/stats" })
     return { session: await verifySession(token) };
   })
 
-  .get("/guards", async () => {
-    return await getGuardStats();
-  })
+  .get("/guards", async ({ query }) => getGuardStats(parseYear(query.year)), { query: yearQuery })
 
-  .get("/netsoul", async ({ session }) => {
+  .get("/netsoul", async ({ session, query }) => {
     try {
-      return await getAerNetsoulStats(Number(session.sub));
+      return await getAerNetsoulStats(Number(session.sub), parseYear(query.year));
     } catch (e) {
       if (e instanceof EpitechTokenMissingError) return httpStatus(409, { error: "no_token" });
       throw e;
     }
-  })
+  }, { query: yearQuery })
 
-  .get("/activities", async () => {
-    return await getAerActivityStats();
-  });
+  .get("/activities", async ({ query }) => getAerActivityStats(parseYear(query.year)), { query: yearQuery });

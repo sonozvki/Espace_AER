@@ -1,6 +1,7 @@
 import { MicrosoftEntraId, generateCodeVerifier, generateState } from "arctic";
 import { prisma } from "@/db/prisma";
 import { findWhitelistEntry } from "@/auth/whitelist";
+import { getCurrentYear } from "@/modules/school-year/school-year.service";
 
 const microsoft = process.env["MICROSOFT_CLIENT_ID"]
   ? new MicrosoftEntraId(
@@ -39,7 +40,8 @@ export async function handleCallback(code: string, codeVerifier: string) {
   return prisma.user.upsert({
     where: { email },
     update: { name, role: whitelist.role },
-    create: { email, name, role: whitelist.role },
+    // Un nouvel AER rejoint la génération de l'année courante
+    create: { email, name, role: whitelist.role, aerSince: await getCurrentYear() },
   });
 }
 

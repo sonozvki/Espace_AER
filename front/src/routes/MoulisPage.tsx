@@ -10,7 +10,8 @@ import { useDisclosure } from "@mantine/hooks";
 import { notifications } from "@mantine/notifications";
 import { useState, useEffect } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { IconPlayerPlay, IconRefresh, IconCheck, IconX, IconSearch } from "@tabler/icons-react";
+import { IconPlayerPlay, IconRefresh, IconCheck, IconX, IconSearch, IconExternalLink } from "@tabler/icons-react";
+import { ArtifactsSection } from "@/features/moulis/components/ArtifactsSection";
 import {
   useMoulisModules,
   useMoulisProjects,
@@ -165,13 +166,26 @@ function GroupModal({
               <Badge color="red" size="lg">{data.failCount} ✗</Badge>
               <Text size="sm" c="dimmed">/ {data.totalCount}</Text>
             </Group>
-            <Button
-              size="xs"
-              leftSection={<IconPlayerPlay size={14} />}
-              onClick={onTriggerRequest}
-            >
-              Relancer
-            </Button>
+            <Group gap="xs">
+              <Button
+                size="xs"
+                variant="light"
+                component="a"
+                href={data.jenkinsUrl}
+                target="_blank"
+                rel="noreferrer"
+                leftSection={<IconExternalLink size={14} />}
+              >
+                Jenkins{data.buildNumber !== null ? ` #${data.buildNumber}` : ""}
+              </Button>
+              <Button
+                size="xs"
+                leftSection={<IconPlayerPlay size={14} />}
+                onClick={onTriggerRequest}
+              >
+                Relancer
+              </Button>
+            </Group>
           </Group>
 
           <Progress
@@ -200,6 +214,18 @@ function GroupModal({
                 </AreaChart>
               </ResponsiveContainer>
             </>
+          )}
+
+          {/* Fichiers générés (trace pédago, rapports…) */}
+          <Divider label={`Fichiers générés (${data.artifacts.length})`} labelPosition="left" />
+          {group && (
+            <ArtifactsSection
+              module={module}
+              project={project}
+              group={group}
+              buildNumber={data.buildNumber}
+              artifacts={data.artifacts}
+            />
           )}
 
           {/* Coverage */}

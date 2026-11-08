@@ -158,7 +158,7 @@ function DayCell({ day, guard, currentUser }: DayCellProps) {
 
           {!past && currentUser && (
             <Group gap={6} mt="auto" wrap="wrap">
-              {isFree && !myAbsence && !myUnavailability && (
+              {isFree && !myAbsence && !myUnavailability && currentUser.isActiveAer !== false && (
                 <Button
                   size="xs"
                   variant="filled"

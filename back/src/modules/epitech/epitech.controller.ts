@@ -6,6 +6,7 @@ import {
   getIntraPromos,
   getIntraStudents,
   getStudentsFromCache,
+  getCachedPromos,
   saveStudentsToCache,
   getStudentNotes,
   EpitechTokenMissingError,
@@ -44,11 +45,18 @@ export const epitechController = new Elysia({ prefix: "/epitech" })
   .get(
     "/intra/promos",
     async ({ session, query }) => {
+      const location = query.location ?? "FR/NCE";
+      // Promos du trombi (référence, décalées à chaque année) + celles que l'intra connaît encore
+      const cached = await getCachedPromos(location);
+      let intra: string[] = [];
       try {
-        return await getIntraPromos(Number(session.sub), query.location ?? "FR/NCE");
+        intra = await getIntraPromos(Number(session.sub), location);
       } catch (err) {
-        return handleEpitechError(err);
+        if (cached.length === 0) return handleEpitechError(err);
       }
+      return [...new Set([...cached, ...intra])].sort((a, b) =>
+        a.localeCompare(b, undefined, { numeric: true })
+      );
     },
     {
       query: t.Object({

@@ -17,6 +17,9 @@ model User {
   name         String
   role         Role     @default(ADMIN)
   epitechToken   String?  // Cookie "user" de intra.epitech.eu, chiffré (AES-256-GCM)
+  // Génération AER : année scolaire où l'AER a commencé (2026 = 2026-2027).
+  // Seules les AER_GENERATIONS générations les plus récentes sont actives (FIFO).
+  aerSince     Int?
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
@@ -86,6 +89,13 @@ model Resource {
   fileData    Bytes?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+}
+
+// Années scolaires. La plus récente est l'année courante ; sa startDate borne les stats.
+model SchoolYear {
+  year      Int      @id // 2026 = année 2026-2027
+  startDate DateTime @db.Date
+  createdAt DateTime @default(now())
 }
 
 model StudentCache {

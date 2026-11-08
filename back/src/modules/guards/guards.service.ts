@@ -1,5 +1,7 @@
 import { guardsRepository } from "./guards.repository";
 import { startOfDay } from "@/lib/dates";
+import { prisma } from "@/db/prisma";
+import { getCurrentYear, isActiveAer } from "@/modules/school-year/school-year.service";
 
 interface SchoolHolidayPeriod {
   description: string;
@@ -96,6 +98,12 @@ export const guardsService = {
     const guard = await guardsRepository.findById(id);
     if (!guard) throw new Error("NOT_FOUND");
     if (startOfDay(guard.date) < startOfDay(new Date())) throw new Error("PAST_GUARD");
+    if (guardAerId !== null) {
+      // Les AER sortis de la FIFO gardent l'accès mais ne prennent plus de gardes
+      const aer = await prisma.user.findUnique({ where: { id: guardAerId }, select: { aerSince: true } });
+      if (!aer) throw new Error("NOT_FOUND");
+      if (!isActiveAer(aer.aerSince, await getCurrentYear())) throw new Error("INACTIVE_AER");
+    }
     return guardsRepository.assign(id, guardAerId);
   },
 

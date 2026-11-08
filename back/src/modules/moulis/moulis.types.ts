@@ -48,8 +48,19 @@ export type BuildTrend = {
   timestamp: number;
 };
 
+export type BuildArtifact = {
+  fileName: string;
+  relativePath: string;
+};
+
 export type GroupDetail = {
   group: string;
+  /** Numéro du build affiché (lastBuild au moment de la requête) */
+  buildNumber: number | null;
+  /** Lien direct vers la page du build sur Jenkins */
+  jenkinsUrl: string;
+  /** Fichiers générés par la mouli (trace pédago, rapports…) */
+  artifacts: BuildArtifact[];
   members: string[];
   passCount: number;
   failCount: number;

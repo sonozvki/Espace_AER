@@ -1,5 +1,5 @@
-import { schoolYear } from "@/lib/dates";
-import type { GroupSummary, GroupDetail, CodingStyleInfraction, TestSuite, BuildTrend, TriggerParams } from "./moulis.types";
+import { getCurrentYear } from "@/modules/school-year/school-year.service";
+import type { BuildArtifact, GroupSummary, GroupDetail, CodingStyleInfraction, TestSuite, BuildTrend, TriggerParams } from "./moulis.types";
 
 const JENKINS_URL = process.env["JENKINS_URL"] ?? "https://jenkins.epitest.eu";
 const JENKINS_USER = process.env["JENKINS_USER"] ?? "";
@@ -67,11 +67,12 @@ type ResolvedPath = { yearPath: string; instancePath: string; triggerJobName: st
 const resolvedPathCache = new Map<string, ResolvedPath>();
 
 async function resolveInstancePath(module: string, project: string): Promise<ResolvedPath | null> {
-  const cacheKey = `${module}/${project}`;
+  const currentYear = await getCurrentYear();
+  const cacheKey = `${currentYear}/${module}/${project}`;
   const cached = resolvedPathCache.get(cacheKey);
   if (cached) return cached;
 
-  const year = String(schoolYear());
+  const year = String(currentYear);
   const yearPath = jobPath(module, project, year);
 
   // Fast path: expected instance exists directly
@@ -94,7 +95,7 @@ async function resolveInstancePath(module: string, project: string): Promise<Res
   );
   if (!yearData || yearData.jobs.length === 0) {
     // Try year-1 as fallback
-    const fallbackYear = String(schoolYear() - 1);
+    const fallbackYear = String(currentYear - 1);
     const fallbackYearPath = jobPath(module, project, fallbackYear);
     const fallbackData = await jGet<{ jobs: { name: string }[] }>(
       `${fallbackYearPath}/api/json?tree=jobs[name]`
@@ -244,7 +245,10 @@ export async function getGroupDetail(module: string, project: string, group: str
   if (!resolved) return null;
   const buildBase = `${resolved.instancePath}${jobPath(group)}/lastBuild`;
 
-  const [testReport, banana, coverageText] = await Promise.all([
+  const [buildInfo, testReport, banana, coverageText] = await Promise.all([
+    jGet<{ number: number; artifacts: BuildArtifact[] }>(
+      `${buildBase}/api/json?tree=number,artifacts[fileName,relativePath]`
+    ),
     jGet<{
       failCount: number;
       passCount: number;
@@ -277,8 +281,14 @@ export async function getGroupDetail(module: string, project: string, group: str
     })),
   }));
 
+  const groupPath = `${resolved.instancePath}${jobPath(group)}`;
+  const buildNumber = buildInfo?.number ?? null;
+
   return {
     group,
+    buildNumber,
+    jenkinsUrl: `${JENKINS_URL}${groupPath}/${buildNumber ?? "lastBuild"}/`,
+    artifacts: (buildInfo?.artifacts ?? []).map((a) => ({ fileName: a.fileName, relativePath: a.relativePath })),
     members: parseMembers(group),
     passCount: testReport.passCount,
     failCount: testReport.failCount,
@@ -287,6 +297,40 @@ export async function getGroupDetail(module: string, project: string, group: str
     codingStyle: { mark: banana?.mark ?? 0, infractions: banana?.infractions ?? [] },
     coverage: parseCoverage(coverageText ?? ""),
   };
+}
+
+/**
+ * Proxy d'un artefact de build Jenkins (trace pédago, rapports…).
+ * Le chemin doit figurer dans la liste des artefacts du build : pas de lecture arbitraire.
+ */
+export async function getGroupArtifact(
+  module: string, project: string, group: string, build: number, relativePath: string
+): Promise<{ body: ArrayBuffer; contentType: string; fileName: string } | null> {
+  const resolved = await resolveInstancePath(module, project);
+  if (!resolved) return null;
+  const buildBase = `${resolved.instancePath}${jobPath(group)}/${build}`;
+
+  const info = await jGet<{ artifacts: BuildArtifact[] }>(
+    `${buildBase}/api/json?tree=artifacts[fileName,relativePath]`
+  );
+  const artifact = info?.artifacts.find((a) => a.relativePath === relativePath);
+  if (!artifact) return null;
+
+  const encodedPath = artifact.relativePath.split("/").map(encodeURIComponent).join("/");
+  try {
+    const res = await fetch(`${JENKINS_URL}${buildBase}/artifact/${encodedPath}`, {
+      headers: { Authorization: `Basic ${AUTH}` },
+      redirect: "follow",
+    });
+    if (!res.ok) return null;
+    return {
+      body: await res.arrayBuffer(),
+      contentType: res.headers.get("content-type") ?? "application/octet-stream",
+      fileName: artifact.fileName,
+    };
+  } catch {
+    return null;
+  }
 }
 
 function buildParamsQs(params: TriggerParams): string {

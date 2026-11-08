@@ -10,6 +10,7 @@ import { SettingsPage } from "@/routes/SettingsPage";
 import { SuiviPage } from "@/routes/SuiviPage";
 import { StudentNotesPage } from "@/routes/StudentNotesPage";
 import { MoulisPage } from "@/routes/MoulisPage";
+import { SchoolYearPage } from "@/routes/SchoolYearPage";
 import { NotFoundPage } from "@/routes/NotFoundPage";
 import "@/styles/global.css";
 
@@ -32,6 +33,7 @@ export const router = createBrowserRouter([
       { path: "suivi", element: <SuiviPage /> },
       { path: "suivi/:login", element: <StudentNotesPage /> },
       { path: "moulis", element: <MoulisPage /> },
+      { path: "annee", element: <SchoolYearPage /> },
     ],
   },
   {
