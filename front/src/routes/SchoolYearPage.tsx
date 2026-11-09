@@ -21,12 +21,21 @@ function formatDay(iso: string) {
   return new Date(iso).toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric", timeZone: "UTC" });
 }
 
-/** Rang de la génération : 1re année AER, 2e année AER… au-delà de `generations` → ancien */
+/**
+ * Génération = année civile d'arrivée, en février de la tek2.
+ * Pendant l'année scolaire `current` : arrivés en fév. current+1 → 1re année (tek2),
+ * arrivés en fév. current → 2e année (tek3), plus anciens → anciens AER.
+ */
+function arrivingGeneration(current: number) {
+  return current + 1;
+}
+
 function generationLabel(aerSince: number, current: number, generations: number) {
-  const rank = current - aerSince + 1;
-  if (rank < 1) return `Génération ${aerSince}`;
-  if (rank > generations) return `Ancien AER (${aerSince})`;
-  return `${rank === 1 ? "1re" : `${rank}e`} année AER (${aerSince})`;
+  const rank = arrivingGeneration(current) - aerSince + 1;
+  const arrival = `arrivée fév. ${aerSince}`;
+  if (rank < 1) return `Futur AER (${arrival})`;
+  if (rank > generations) return `Ancien AER (${arrival})`;
+  return `${rank === 1 ? "1re" : `${rank}e`} année AER · tek${rank + 1} (${arrival})`;
 }
 
 function RolloverModal({ opened, onClose }: { opened: boolean; onClose: () => void }) {
@@ -124,7 +133,7 @@ export function SchoolYearPage() {
 
   const current = state.current.year;
   // Choix proposés : générations actives + une génération « ancienne »
-  const generationOptions = Array.from({ length: state.generations + 1 }, (_, i) => current - i).map((y) => ({
+  const generationOptions = Array.from({ length: state.generations + 1 }, (_, i) => arrivingGeneration(current) - i).map((y) => ({
     value: String(y),
     label: generationLabel(y, current, state.generations),
   }));
@@ -163,12 +172,14 @@ export function SchoolYearPage() {
       </Paper>
 
       <Paper p="lg" withBorder style={{ borderColor: "var(--epi-border)" }}>
-        <Group mb="md">
+        <Group mb="md" wrap="nowrap" align="flex-start">
           <ThemeIcon variant="light" color="epitech"><IconUsers size={16} /></ThemeIcon>
           <div>
             <Text fw={700} size="lg" ff="Anton, sans-serif">Générations d'AER</Text>
             <Text size="sm" c="dimmed">
-              Un nouvel AER rejoint automatiquement la génération de l'année en cours à sa première connexion.
+              Un nouvel AER rejoint automatiquement la génération arrivant en février {arrivingGeneration(current)} à
+              sa première connexion. 1re année : 2nd semestre des tek1 (fév. → juil.) · 2e année : piscine et
+              rentrée des tek1, puis supervision des tek2 (sept. → mars).
             </Text>
           </div>
         </Group>
@@ -200,7 +211,7 @@ export function SchoolYearPage() {
                       <Table.Td>
                         <Select
                           size="xs"
-                          w={220}
+                          w={300}
                           data={options}
                           value={value}
                           placeholder="Non définie"

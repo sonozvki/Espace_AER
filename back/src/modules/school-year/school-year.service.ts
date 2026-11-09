@@ -55,17 +55,31 @@ export async function getSchoolYearBounds(year?: number): Promise<SchoolYearBoun
   return { year: target, start, end };
 }
 
+/*
+ * Génération AER (User.aerSince) = année civile d'arrivée, en février de la tek2.
+ * Pendant l'année scolaire Y (sept. Y → août Y+1) :
+ *   - aerSince = Y+1 : 1re année AER (tek2), arrivent en février Y+1
+ *   - aerSince = Y   : 2e année AER (tek3), arrivés en février Y (piscine → mars)
+ * Le passage d'année (septembre) fait sortir la génération la plus ancienne (FIFO).
+ */
+
+/** Génération des AER qui arrivent en février de l'année scolaire `year`. */
+export function arrivingGeneration(year: number): number {
+  return year + 1;
+}
+
 /** Un AER est actif pour l'année Y s'il fait partie des AER_GENERATIONS dernières générations. */
 export function isActiveAer(aerSince: number | null, year: number): boolean {
   if (aerSince === null) return true;
-  return aerSince <= year && aerSince > year - AER_GENERATIONS;
+  const newest = arrivingGeneration(year);
+  return aerSince <= newest && aerSince > newest - AER_GENERATIONS;
 }
 
 export function activeAerWhere(year: number): Prisma.UserWhereInput {
   return {
     OR: [
       { aerSince: null },
-      { aerSince: { lte: year, gt: year - AER_GENERATIONS } },
+      { aerSince: { lte: arrivingGeneration(year), gt: arrivingGeneration(year) - AER_GENERATIONS } },
     ],
   };
 }

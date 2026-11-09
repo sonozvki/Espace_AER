@@ -20,7 +20,7 @@ function todayInParis(): string {
   }).format(new Date());
 }
 
-/** "Simon Puccio" → "Simon P." */
+/** "John Doe" → "John D." */
 function publicName(name: string): string {
   const [first, ...rest] = name.trim().split(/\s+/);
   const last = rest.at(-1);
