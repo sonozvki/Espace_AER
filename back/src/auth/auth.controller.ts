@@ -10,7 +10,9 @@ import { httpStatus } from "@/lib/http";
 import { addToWhitelist, removeFromWhitelist } from "@/auth/whitelist";
 import { encrypt } from "@/lib/crypto";
 import { z } from "zod";
-import { getCurrentYear, isActiveAer, arrivingGeneration } from "@/modules/school-year/school-year.service";
+import {
+  getCurrentYear, isActiveAer, canTakeGuards, aerRole, arrivingGeneration,
+} from "@/modules/school-year/school-year.service";
 
 const WhitelistBodySchema = z.object({
   email: z.email(),
@@ -134,7 +136,14 @@ export const authController = new Elysia({ prefix: "/auth" })
       role: user.role,
       hasEpitechToken: !!user.epitechToken,
       aerSince: user.aerSince,
-      isActiveAer: isActiveAer(user.aerSince, await getCurrentYear()),
+      ...(await (async () => {
+        const year = await getCurrentYear();
+        return {
+          aerRole: aerRole(user, year),
+          isActiveAer: isActiveAer(user, year),
+          canTakeGuards: canTakeGuards(user, year),
+        };
+      })()),
     };
   })
 
@@ -171,10 +180,14 @@ export const authController = new Elysia({ prefix: "/auth" })
     if (session.role !== "ADMIN") return httpStatus(403, { error: "Accès refusé" });
     const year = await getCurrentYear();
     const users = await prisma.user.findMany({
-      select: { id: true, name: true, email: true, role: true, aerSince: true },
+      select: { id: true, name: true, email: true, role: true, aerSince: true, tek5Year: true },
       orderBy: { name: "asc" },
     });
-    return users.map((u) => ({ ...u, active: isActiveAer(u.aerSince, year) }));
+    return users.map((u) => ({
+      ...u,
+      active: isActiveAer(u, year),
+      canTakeGuards: canTakeGuards(u, year),
+    }));
   })
 
   .get("/whitelist", async ({ cookie }) => {

@@ -20,6 +20,9 @@ model User {
   // Génération AER : année civile d'arrivée en février de la tek2 (2026 = arrivés en fév. 2026,
   // tek3 en 2026-2027). Seules les AER_GENERATIONS plus récentes sont actives (FIFO).
   aerSince     Int?
+  // Année scolaire où l'AER est AER tek5 (retour de l'étranger, sept. → mars, sans gardes).
+  // Distinct de aerSince pour garder la génération d'origine (historique des stats).
+  tek5Year     Int?
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 

@@ -56,31 +56,59 @@ export async function getSchoolYearBounds(year?: number): Promise<SchoolYearBoun
 }
 
 /*
- * Génération AER (User.aerSince) = année civile d'arrivée, en février de la tek2.
- * Pendant l'année scolaire Y (sept. Y → août Y+1) :
- *   - aerSince = Y+1 : 1re année AER (tek2), arrivent en février Y+1
- *   - aerSince = Y   : 2e année AER (tek3), arrivés en février Y (piscine → mars)
- * Le passage d'année (septembre) fait sortir la génération la plus ancienne (FIFO).
+ * Rôles AER pendant l'année scolaire Y (sept. Y → août Y+1) :
+ *   - tek2 : aerSince = Y+1, 1re année AER, arrivent en février Y+1 (fév. → juil.)
+ *   - tek3 : aerSince = Y,   2e année AER, arrivés en février Y (piscine → mars)
+ *   - tek5 : tek5Year = Y,   retour de l'étranger (sept. → mars), ne font pas de gardes
+ *   - ancien : tout le reste (garde l'accès, hors stats et gardes)
+ * aerSince = année civile d'arrivée en tek2 ; le passage d'année fait sortir la génération
+ * la plus ancienne (FIFO) et les tek5 de l'année écoulée.
  */
+
+export type AerFields = { aerSince: number | null; tek5Year: number | null };
+export type AerRole = "tek2" | "tek3" | "tek5" | "ancien";
 
 /** Génération des AER qui arrivent en février de l'année scolaire `year`. */
 export function arrivingGeneration(year: number): number {
   return year + 1;
 }
 
-/** Un AER est actif pour l'année Y s'il fait partie des AER_GENERATIONS dernières générations. */
-export function isActiveAer(aerSince: number | null, year: number): boolean {
-  if (aerSince === null) return true;
+function isRegularGeneration(aerSince: number | null, year: number): boolean {
+  if (aerSince === null) return false;
   const newest = arrivingGeneration(year);
   return aerSince <= newest && aerSince > newest - AER_GENERATIONS;
 }
 
+export function aerRole(u: AerFields, year: number): AerRole {
+  if (u.tek5Year === year) return "tek5";
+  if (isRegularGeneration(u.aerSince, year)) {
+    return u.aerSince === arrivingGeneration(year) ? "tek2" : "tek3";
+  }
+  return "ancien";
+}
+
+/** AER en fonction l'année Y (tek2, tek3 ou tek5) : stats logtime/activités, équipe. */
+export function isActiveAer(u: AerFields, year: number): boolean {
+  return aerRole(u, year) !== "ancien";
+}
+
+/** Seuls les tek2/tek3 prennent des gardes. */
+export function canTakeGuards(u: AerFields, year: number): boolean {
+  const role = aerRole(u, year);
+  return role === "tek2" || role === "tek3";
+}
+
+function regularWhere(year: number): Prisma.UserWhereInput {
+  return { aerSince: { lte: arrivingGeneration(year), gt: arrivingGeneration(year) - AER_GENERATIONS } };
+}
+
 export function activeAerWhere(year: number): Prisma.UserWhereInput {
+  return { OR: [regularWhere(year), { tek5Year: year }] };
+}
+
+export function guardAerWhere(year: number): Prisma.UserWhereInput {
   return {
-    OR: [
-      { aerSince: null },
-      { aerSince: { lte: arrivingGeneration(year), gt: arrivingGeneration(year) - AER_GENERATIONS } },
-    ],
+    AND: [regularWhere(year), { OR: [{ tek5Year: null }, { tek5Year: { not: year } }] }],
   };
 }
 
@@ -94,7 +122,7 @@ export function nextPromo(promo: string): string {
 export type RolloverPreview = {
   from: number;
   to: number;
-  leavingAers: { id: number; name: string; email: string; aerSince: number | null }[];
+  leavingAers: { id: number; name: string; email: string; role: AerRole }[];
   promoShifts: { from: string; to: string; count: number }[];
 };
 
@@ -104,7 +132,7 @@ export async function previewRollover(): Promise<RolloverPreview> {
   const [users, promos] = await Promise.all([
     prisma.user.findMany({
       where: activeAerWhere(year),
-      select: { id: true, name: true, email: true, aerSince: true },
+      select: { id: true, name: true, email: true, aerSince: true, tek5Year: true },
       orderBy: { name: "asc" },
     }),
     prisma.studentCache.groupBy({ by: ["promo"], _count: { id: true } }),
@@ -112,8 +140,10 @@ export async function previewRollover(): Promise<RolloverPreview> {
   return {
     from: year,
     to,
-    // Actifs cette année mais plus l'année suivante → sortent de la FIFO
-    leavingAers: users.filter((u) => u.aerSince !== null && !isActiveAer(u.aerSince, to)),
+    // Actifs cette année mais plus l'année suivante → tek3 sortants (FIFO) et tek5 de l'année
+    leavingAers: users
+      .filter((u) => !isActiveAer(u, to))
+      .map((u) => ({ id: u.id, name: u.name, email: u.email, role: aerRole(u, year) })),
     promoShifts: promos
       .filter((p) => nextPromo(p.promo) !== p.promo)
       .map((p) => ({ from: p.promo, to: nextPromo(p.promo), count: p._count.id }))
@@ -171,20 +201,53 @@ export async function rolloverSchoolYear(userId: number, startDate: Date): Promi
   return preview;
 }
 
+const ROLE_ORDER: Record<AerRole, number> = { tek2: 0, tek3: 1, tek5: 2, ancien: 3 };
+
 export async function listAers(year?: number) {
-  const current = await getCurrentYear();
-  const y = year ?? current;
+  const y = year ?? (await getCurrentYear());
   const users = await prisma.user.findMany({
-    select: { id: true, name: true, email: true, aerSince: true },
-    orderBy: [{ aerSince: "desc" }, { name: "asc" }],
+    select: { id: true, name: true, email: true, aerSince: true, tek5Year: true },
+    orderBy: { name: "asc" },
   });
-  return users.map((u) => ({ ...u, active: isActiveAer(u.aerSince, y) }));
+  return users
+    .map((u) => ({
+      ...u,
+      role: aerRole(u, y),
+      active: isActiveAer(u, y),
+      canTakeGuards: canTakeGuards(u, y),
+    }))
+    .sort((a, b) => ROLE_ORDER[a.role] - ROLE_ORDER[b.role]);
 }
 
-export async function setAerGeneration(userId: number, aerSince: number) {
+/** Change le rôle d'un AER pour l'année courante en gardant aerSince et tek5Year cohérents. */
+export async function setAerRole(userId: number, role: AerRole) {
+  const year = await getCurrentYear();
+  const user = await prisma.user.findUniqueOrThrow({
+    where: { id: userId },
+    select: { aerSince: true, tek5Year: true },
+  });
+  const regular = isRegularGeneration(user.aerSince, year);
+
+  const data: AerFields = (() => {
+    switch (role) {
+      case "tek2":
+        return { aerSince: arrivingGeneration(year), tek5Year: null };
+      case "tek3":
+        return { aerSince: year, tek5Year: null };
+      case "tek5":
+        // Génération d'origine conservée si elle est ancienne (ex. ancien AER tek3 revenu en tek5)
+        return { aerSince: regular ? null : user.aerSince, tek5Year: year };
+      case "ancien":
+        return {
+          aerSince: regular ? arrivingGeneration(year) - AER_GENERATIONS : user.aerSince,
+          tek5Year: user.tek5Year === year ? null : user.tek5Year,
+        };
+    }
+  })();
+
   return prisma.user.update({
     where: { id: userId },
-    data: { aerSince },
-    select: { id: true, name: true, email: true, aerSince: true },
+    data,
+    select: { id: true, name: true, email: true, aerSince: true, tek5Year: true },
   });
 }

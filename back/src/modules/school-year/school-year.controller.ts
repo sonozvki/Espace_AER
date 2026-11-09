@@ -8,7 +8,7 @@ import {
   listAers,
   previewRollover,
   rolloverSchoolYear,
-  setAerGeneration,
+  setAerRole,
   RolloverConflictError,
 } from "./school-year.service";
 
@@ -34,11 +34,13 @@ export const schoolYearController = new Elysia({ prefix: "/school-year" })
     "/aers/:id",
     async ({ session, params, body }) => {
       if (session.role !== "ADMIN") return httpStatus(403, { error: "Accès refusé" });
-      return setAerGeneration(Number(params.id), body.aerSince);
+      return setAerRole(Number(params.id), body.role);
     },
     {
       params: t.Object({ id: t.String() }),
-      body: t.Object({ aerSince: t.Integer({ minimum: 2000, maximum: 2100 }) }),
+      body: t.Object({
+        role: t.Union([t.Literal("tek2"), t.Literal("tek3"), t.Literal("tek5"), t.Literal("ancien")]),
+      }),
     }
   )
 

@@ -2,7 +2,7 @@ import { prisma } from "@/db/prisma";
 import { decrypt } from "@/lib/crypto";
 import { isoDay } from "@/lib/dates";
 import { getUserCookie, fetchIntra, EpitechTokenMissingError } from "@/modules/epitech/epitech.service";
-import { getSchoolYearBounds, activeAerWhere } from "@/modules/school-year/school-year.service";
+import { getSchoolYearBounds, activeAerWhere, guardAerWhere } from "@/modules/school-year/school-year.service";
 
 /**
  * Bornes et AER concernés pour une année scolaire (courante par défaut).
@@ -18,6 +18,8 @@ async function statsScope(year?: number) {
     startDay: isoDay(bounds.start),
     endDay: isoDay(end < new Date() ? end : new Date()),
     userWhere: activeAerWhere(bounds.year),
+    // Les tek5 ne font pas de gardes : absents des stats de gardes
+    guardUserWhere: guardAerWhere(bounds.year),
   };
 }
 
@@ -36,10 +38,10 @@ export type GuardStat = {
 };
 
 export async function getGuardStats(year?: number): Promise<GuardStat[]> {
-  const { start, end, userWhere } = await statsScope(year);
+  const { start, end, guardUserWhere } = await statsScope(year);
 
   const users = await prisma.user.findMany({
-    where: userWhere,
+    where: guardUserWhere,
     select: { id: true, name: true, email: true },
   });
 

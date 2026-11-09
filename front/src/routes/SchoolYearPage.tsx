@@ -6,9 +6,9 @@ import {
 import { useDisclosure } from "@mantine/hooks";
 import { IconCalendarUp, IconAlertTriangle, IconArrowRight, IconUsers } from "@tabler/icons-react";
 import {
-  useSchoolYear, useAerGenerations, useRolloverPreview, useRollover, useSetAerGeneration,
+  useSchoolYear, useAerTeam, useRolloverPreview, useRollover, useSetAerRole,
 } from "@/features/school-year/hooks";
-import { yearLabel } from "@/features/school-year/api";
+import { yearLabel, type AerRole, type AerMember } from "@/features/school-year/api";
 
 const MONO = '"IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace';
 
@@ -22,20 +22,25 @@ function formatDay(iso: string) {
 }
 
 /**
- * Génération = année civile d'arrivée, en février de la tek2.
- * Pendant l'année scolaire `current` : arrivés en fév. current+1 → 1re année (tek2),
- * arrivés en fév. current → 2e année (tek3), plus anciens → anciens AER.
+ * Rôles pendant l'année scolaire `current` (sept. current → août current+1) :
+ * tek2 = 1re année AER (arrivée en fév. current+1), tek3 = 2e année (arrivés en fév. current),
+ * tek5 = retour de l'étranger (sept. → mars, sans gardes), ancien = hors fonction.
  */
-function arrivingGeneration(current: number) {
-  return current + 1;
+function roleLabel(role: AerRole, current: number) {
+  switch (role) {
+    case "tek2": return `1re année AER · tek2 (arrivée fév. ${current + 1})`;
+    case "tek3": return `2e année AER · tek3 (arrivée fév. ${current})`;
+    case "tek5": return "AER tek5 (sans gardes)";
+    case "ancien": return "Ancien AER";
+  }
 }
 
-function generationLabel(aerSince: number, current: number, generations: number) {
-  const rank = arrivingGeneration(current) - aerSince + 1;
-  const arrival = `arrivée fév. ${aerSince}`;
-  if (rank < 1) return `Futur AER (${arrival})`;
-  if (rank > generations) return `Ancien AER (${arrival})`;
-  return `${rank === 1 ? "1re" : `${rank}e`} année AER · tek${rank + 1} (${arrival})`;
+const ROLES: AerRole[] = ["tek2", "tek3", "tek5", "ancien"];
+
+function StatusBadge({ member }: { member: AerMember }) {
+  if (!member.active) return <Badge color="gray" variant="light">Ancien</Badge>;
+  if (!member.canTakeGuards) return <Badge color="violet" variant="light">Actif · sans gardes</Badge>;
+  return <Badge color="green" variant="light">Actif</Badge>;
 }
 
 function RolloverModal({ opened, onClose }: { opened: boolean; onClose: () => void }) {
@@ -76,12 +81,15 @@ function RolloverModal({ opened, onClose }: { opened: boolean; onClose: () => vo
           ) : (
             <Stack gap={4}>
               <Text size="sm">
-                Ces AER sortent des générations actives. Ils gardent l'accès à l'Espace AER mais
-                n'apparaissent plus dans les stats ni dans le planning des gardes :
+                Ces AER (tek3 et tek5 de l'année écoulée) terminent leur mandat. Ils gardent l'accès à
+                l'Espace AER mais n'apparaissent plus dans les stats ni dans le planning des gardes :
               </Text>
               <List size="sm" spacing={2}>
                 {preview.leavingAers.map((u) => (
-                  <List.Item key={u.id}>{u.name} <Text span c="dimmed" size="xs">({u.email})</Text></List.Item>
+                  <List.Item key={u.id}>
+                    {u.name} <Badge size="xs" variant="outline" color="gray">{u.role}</Badge>{" "}
+                    <Text span c="dimmed" size="xs">({u.email})</Text>
+                  </List.Item>
                 ))}
               </List>
             </Stack>
@@ -125,18 +133,14 @@ function RolloverModal({ opened, onClose }: { opened: boolean; onClose: () => vo
 
 export function SchoolYearPage() {
   const { data: state, isLoading } = useSchoolYear();
-  const { data: aers, isLoading: aersLoading } = useAerGenerations();
-  const setGeneration = useSetAerGeneration();
+  const { data: aers, isLoading: aersLoading } = useAerTeam();
+  const setRole = useSetAerRole();
   const [modalOpened, { open, close }] = useDisclosure(false);
 
   if (isLoading || !state) return <Center h={200}><Loader /></Center>;
 
   const current = state.current.year;
-  // Choix proposés : générations actives + une génération « ancienne »
-  const generationOptions = Array.from({ length: state.generations + 1 }, (_, i) => arrivingGeneration(current) - i).map((y) => ({
-    value: String(y),
-    label: generationLabel(y, current, state.generations),
-  }));
+  const roleOptions = ROLES.map((r) => ({ value: r, label: roleLabel(r, current) }));
 
   return (
     <Stack gap="xl" maw={900}>
@@ -158,8 +162,8 @@ export function SchoolYearPage() {
           </Button>
         </Group>
         <Text size="sm" c="dimmed" mt="md">
-          Passer à l'année suivante fait monter chaque génération d'AER d'un cran (seules les {state.generations} plus
-          récentes restent actives) et décale le trombi : tek1 → tek2, tek2 → tek3…
+          Passer à l'année suivante fait monter les AER d'un cran (les tek2 deviennent tek3, les tek3 et tek5
+          terminent leur mandat) et décale le trombi : tek1 → tek2, tek2 → tek3…
         </Text>
         {state.years.length > 1 && (
           <Group gap="xs" mt="md">
@@ -175,11 +179,11 @@ export function SchoolYearPage() {
         <Group mb="md" wrap="nowrap" align="flex-start">
           <ThemeIcon variant="light" color="epitech"><IconUsers size={16} /></ThemeIcon>
           <div>
-            <Text fw={700} size="lg" ff="Anton, sans-serif">Générations d'AER</Text>
+            <Text fw={700} size="lg" ff="Anton, sans-serif">Équipe AER</Text>
             <Text size="sm" c="dimmed">
-              Un nouvel AER rejoint automatiquement la génération arrivant en février {arrivingGeneration(current)} à
-              sa première connexion. 1re année : 2nd semestre des tek1 (fév. → juil.) · 2e année : piscine et
-              rentrée des tek1, puis supervision des tek2 (sept. → mars).
+              tek2 : 2nd semestre des tek1 (fév. → juil.) · tek3 : piscine et rentrée des tek1, puis supervision
+              des tek2 (sept. → mars) · tek5 : retour de l'étranger (sept. → mars), sans gardes.
+              À sa première connexion, un nouvel AER est classé tek2 : pense à changer le rôle des tek5.
             </Text>
           </div>
         </Group>
@@ -191,17 +195,12 @@ export function SchoolYearPage() {
               <Table.Thead>
                 <Table.Tr>
                   <Table.Th>Nom</Table.Th>
-                  <Table.Th>Génération</Table.Th>
+                  <Table.Th>Rôle {yearLabel(current)}</Table.Th>
                   <Table.Th>Statut</Table.Th>
                 </Table.Tr>
               </Table.Thead>
               <Table.Tbody>
                 {(aers ?? []).map((u) => {
-                  const value = u.aerSince !== null ? String(u.aerSince) : null;
-                  // Génération plus ancienne que les choix proposés : on l'ajoute pour l'afficher
-                  const options = value && !generationOptions.some((o) => o.value === value)
-                    ? [...generationOptions, { value, label: generationLabel(u.aerSince!, current, state.generations) }]
-                    : generationOptions;
                   return (
                     <Table.Tr key={u.id}>
                       <Table.Td>
@@ -212,17 +211,14 @@ export function SchoolYearPage() {
                         <Select
                           size="xs"
                           w={300}
-                          data={options}
-                          value={value}
-                          placeholder="Non définie"
+                          data={roleOptions}
+                          value={u.role}
                           allowDeselect={false}
-                          onChange={(v) => v && setGeneration.mutate({ id: u.id, aerSince: Number(v) })}
+                          onChange={(v) => v && v !== u.role && setRole.mutate({ id: u.id, role: v as AerRole })}
                         />
                       </Table.Td>
                       <Table.Td>
-                        <Badge color={u.active ? "green" : "gray"} variant="light">
-                          {u.active ? "Actif" : "Ancien"}
-                        </Badge>
+                        <StatusBadge member={u} />
                       </Table.Td>
                     </Table.Tr>
                   );

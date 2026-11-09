@@ -8,8 +8,11 @@ export type AuthUser = {
   role: "ADMIN";
   hasEpitechToken: boolean;
   aerSince: number | null;
-  /** false si l'AER est sorti des générations actives : plus de gardes ni de stats */
+  aerRole: "tek2" | "tek3" | "tek5" | "ancien";
+  /** false pour un ancien AER : plus de stats */
   isActiveAer: boolean;
+  /** seuls les tek2/tek3 prennent des gardes (pas les tek5 ni les anciens) */
+  canTakeGuards: boolean;
 };
 
 export function useAuth() {

@@ -1,12 +1,12 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { notifications } from "@mantine/notifications";
-import { schoolYearApi, yearLabel } from "./api";
+import { schoolYearApi, yearLabel, type AerRole } from "./api";
 
 export function useSchoolYear() {
   return useQuery({ queryKey: ["school-year"], queryFn: schoolYearApi.get, staleTime: 5 * 60 * 1000 });
 }
 
-export function useAerGenerations() {
+export function useAerTeam() {
   return useQuery({ queryKey: ["school-year", "aers"], queryFn: schoolYearApi.aers });
 }
 
@@ -19,11 +19,10 @@ export function useRolloverPreview(enabled: boolean) {
   });
 }
 
-export function useSetAerGeneration() {
+export function useSetAerRole() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: ({ id, aerSince }: { id: number; aerSince: number }) =>
-      schoolYearApi.setGeneration(id, aerSince),
+    mutationFn: ({ id, role }: { id: number; role: AerRole }) => schoolYearApi.setRole(id, role),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["school-year"] });
       qc.invalidateQueries({ queryKey: ["stats"] });
