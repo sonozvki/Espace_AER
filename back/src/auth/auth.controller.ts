@@ -1,6 +1,10 @@
 import { Elysia, t } from "elysia";
-import { getAuthorizationUrl, handleCallback } from "@/auth/auth.service";
-import { createSession, verifySession, sessionCookieOptions, COOKIE } from "@/auth/session";
+import { getAuthorizationUrl, handleCallback, handleStudentCallback } from "@/auth/auth.service";
+import {
+  createSession, verifySession, sessionCookieOptions, COOKIE,
+  createStudentSession, STUDENT_COOKIE,
+} from "@/auth/session";
+import { getGuardViewer } from "@/auth/viewer";
 import { prisma } from "@/db/prisma";
 import { httpStatus } from "@/lib/http";
 import { addToWhitelist, removeFromWhitelist } from "@/auth/whitelist";
@@ -24,6 +28,19 @@ async function getSession(cookie: Record<string, { value?: unknown }>) {
   try { return await verifySession(token); } catch { return null; }
 }
 
+type OAuthFlow = "aer" | "student";
+
+function startOAuth(cookie: Record<string, { set: (o: Record<string, unknown>) => void } | undefined>, flow: OAuthFlow) {
+  const { url, state, codeVerifier } = getAuthorizationUrl();
+  const isProd = process.env["NODE_ENV"] === "production";
+  const opts = { httpOnly: true, secure: isProd, sameSite: "lax" as const, maxAge: 600, path: "/" };
+  cookie["oauth_state"]!.set({ value: state, ...opts });
+  cookie["oauth_verifier"]!.set({ value: codeVerifier, ...opts });
+  // Même app Azure et même redirect URI pour les deux flux : le flux est mémorisé ici
+  cookie["oauth_flow"]!.set({ value: flow, ...opts });
+  return url.toString();
+}
+
 export const authController = new Elysia({ prefix: "/auth" })
   .get("/login", async ({ cookie, redirect }) => {
     // Dev mode: no Microsoft credentials → auto-login as ADMIN
@@ -37,18 +54,28 @@ export const authController = new Elysia({ prefix: "/auth" })
       cookie[COOKIE]!.set(sessionCookieOptions(token));
       return redirect(FRONTEND);
     }
-    const { url, state, codeVerifier } = getAuthorizationUrl();
-    const isProd = process.env["NODE_ENV"] === "production";
-    cookie["oauth_state"]!.set({ value: state, httpOnly: true, secure: isProd, sameSite: "lax" as const, maxAge: 600, path: "/" });
-    cookie["oauth_verifier"]!.set({ value: codeVerifier, httpOnly: true, secure: isProd, sameSite: "lax" as const, maxAge: 600, path: "/" });
-    return redirect(url.toString());
+    return redirect(startOAuth(cookie, "aer"));
+  })
+
+  // Connexion étudiant (tout compte Microsoft Epitech) : donne accès uniquement aux routes /api/student
+  .get("/student/login", async ({ cookie, redirect }) => {
+    if (!process.env["MICROSOFT_CLIENT_ID"]) {
+      const token = await createStudentSession({ email: "etudiant.dev@epitech.eu", name: "Étudiant Dev" });
+      cookie[STUDENT_COOKIE]!.set(sessionCookieOptions(token, STUDENT_COOKIE));
+      return redirect(`${FRONTEND}/garde`);
+    }
+    return redirect(startOAuth(cookie, "student"));
   })
 
   .get(
     "/callback",
     async ({ query, cookie, redirect }) => {
+      const flow: OAuthFlow = cookie["oauth_flow"]?.value === "student" ? "student" : "aer";
+      cookie["oauth_flow"]?.set({ value: "", maxAge: 0, path: "/" });
+      const errorPage = flow === "student" ? `${FRONTEND}/garde` : `${FRONTEND}/login`;
+
       if (query.error) {
-        return redirect(`${FRONTEND}/login?error=${encodeURIComponent(String(query.error))}`);
+        return redirect(`${errorPage}?error=${encodeURIComponent(String(query.error))}`);
       }
       const storedState = cookie["oauth_state"]?.value as string | undefined;
       const codeVerifier = cookie["oauth_verifier"]?.value as string | undefined;
@@ -56,13 +83,19 @@ export const authController = new Elysia({ prefix: "/auth" })
         return httpStatus(400, { error: "OAuth state invalide" });
       }
       try {
+        if (flow === "student") {
+          const student = await handleStudentCallback(query.code, codeVerifier);
+          const token = await createStudentSession(student);
+          cookie[STUDENT_COOKIE]!.set(sessionCookieOptions(token, STUDENT_COOKIE));
+          return redirect(`${FRONTEND}/garde`);
+        }
         const user = await handleCallback(query.code, codeVerifier);
         const token = await createSession(user);
         cookie[COOKIE]!.set(sessionCookieOptions(token));
         return redirect(FRONTEND);
       } catch (err) {
         if (err instanceof Error && err.message === "UNAUTHORIZED") {
-          return redirect(`${FRONTEND}/login?error=unauthorized`);
+          return redirect(`${errorPage}?error=unauthorized`);
         }
         console.error("[auth/callback] error:", err);
         return httpStatus(500, { error: "Erreur d'authentification" });
@@ -76,6 +109,18 @@ export const authController = new Elysia({ prefix: "/auth" })
       }),
     }
   )
+
+  // Qui consulte la page des gardes : un étudiant connecté, ou un AER (qui y a aussi accès)
+  .get("/student/me", async ({ cookie }) => {
+    const viewer = await getGuardViewer(cookie);
+    if (!viewer) return httpStatus(401, { error: "Non authentifié" });
+    return viewer;
+  })
+
+  .post("/student/logout", ({ cookie }) => {
+    cookie[STUDENT_COOKIE]!.set({ value: "", maxAge: 0, path: "/" });
+    return httpStatus(204);
+  })
 
   .get("/me", async ({ cookie }) => {
     const session = await getSession(cookie);

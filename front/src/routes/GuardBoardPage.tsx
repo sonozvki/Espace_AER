@@ -1,18 +1,28 @@
-import { Box, Stack, Group, Text, Title, Paper, Badge, Loader, Center, Container, ThemeIcon } from "@mantine/core";
-import { IconShield, IconShieldOff } from "@tabler/icons-react";
-import { useQuery } from "@tanstack/react-query";
-import { apiFetch } from "@/lib/api";
+import {
+  Box, Stack, Group, Text, Title, Paper, Badge, Loader, Center, Container, ThemeIcon, Button, Alert, Anchor,
+} from "@mantine/core";
+import { IconShield, IconShieldOff, IconBrandWindows, IconAlertCircle } from "@tabler/icons-react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useSearchParams } from "react-router-dom";
+import { apiFetch, BASE_URL } from "@/lib/api";
 
 const MONO = '"IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace';
 
-type PublicGuardDay = {
+type GuardDay = {
   date: string; // YYYY-MM-DD
   aer: string | null; // "Prénom N."
   publicHolidayName: string | null;
   schoolHolidayName: string | null;
 };
 
-type PublicGuards = { today: string; days: PublicGuardDay[] };
+type GuardBoard = { today: string; days: GuardDay[] };
+
+type GuardViewer = { kind: "student" | "aer"; name: string; email: string };
+
+const LOGIN_ERRORS: Record<string, string> = {
+  unauthorized: "Seuls les comptes Microsoft Epitech (@epitech.eu) peuvent accéder à cette page.",
+  access_denied: "Connexion annulée.",
+};
 
 function formatDay(iso: string, opts: Intl.DateTimeFormatOptions) {
   return new Date(`${iso}T12:00:00Z`).toLocaleDateString("fr-FR", { timeZone: "UTC", ...opts });
@@ -22,7 +32,7 @@ function capitalize(s: string) {
   return s.charAt(0).toUpperCase() + s.slice(1);
 }
 
-function HolidayBadges({ day }: { day: PublicGuardDay }) {
+function HolidayBadges({ day }: { day: GuardDay }) {
   return (
     <>
       {day.publicHolidayName && <Badge size="sm" color="pink" variant="light">{day.publicHolidayName}</Badge>}
@@ -31,14 +41,58 @@ function HolidayBadges({ day }: { day: PublicGuardDay }) {
   );
 }
 
-/** Page publique (sans connexion) : qui est de garde aujourd'hui et les jours suivants. */
-export function PublicGuardPage() {
-  const { data, isLoading, isError } = useQuery({
-    queryKey: ["public", "guards"],
-    queryFn: () => apiFetch<PublicGuards>("/api/public/guards?days=7"),
+function LoginCard() {
+  const [params] = useSearchParams();
+  const error = params.get("error");
+  return (
+    <Paper p="xl" withBorder style={{ borderColor: "var(--epi-border)" }}>
+      <Stack gap="md" align="center" ta="center">
+        <Text>Connecte-toi avec ton compte Microsoft Epitech pour voir quel AER est de garde.</Text>
+        {error && (
+          <Alert color="red" icon={<IconAlertCircle size={16} />} w="100%" ta="left">
+            {LOGIN_ERRORS[error] ?? "La connexion a échoué, réessaie."}
+          </Alert>
+        )}
+        <Button
+          component="a"
+          href={`${BASE_URL}/auth/student/login`}
+          size="md"
+          leftSection={<IconBrandWindows size={18} />}
+        >
+          Se connecter avec Microsoft
+        </Button>
+      </Stack>
+    </Paper>
+  );
+}
+
+/**
+ * Page étudiants : qui est de garde aujourd'hui et les jours suivants.
+ * Accessible avec un compte Microsoft Epitech (session étudiante) ou une session AER.
+ */
+export function GuardBoardPage() {
+  const qc = useQueryClient();
+  const { data: viewer, isLoading: viewerLoading } = useQuery({
+    queryKey: ["student", "me"],
+    queryFn: () => apiFetch<GuardViewer>("/auth/student/me"),
+    retry: false,
+    staleTime: 5 * 60 * 1000,
+  });
+
+  const { data, isLoading: guardsLoading, isError } = useQuery({
+    queryKey: ["student", "guards"],
+    queryFn: () => apiFetch<GuardBoard>("/api/student/guards?days=7"),
+    enabled: !!viewer,
     refetchInterval: 60_000,
     refetchOnWindowFocus: true,
   });
+  const isLoading = viewerLoading || (!!viewer && guardsLoading);
+
+  async function logout() {
+    await fetch(`${BASE_URL}/auth/student/logout`, { method: "POST", credentials: "include" });
+    qc.removeQueries({ queryKey: ["student"] });
+    qc.invalidateQueries({ queryKey: ["student", "me"] });
+  }
 
   const today = data?.days.find((d) => d.date === data.today) ?? null;
   const upcoming = data?.days.filter((d) => d.date > data.today) ?? [];
@@ -62,11 +116,15 @@ export function PublicGuardPage() {
               Qui est de garde ?
             </Title>
             <Text mt="sm" size="lg" style={{ color: "rgba(255,255,255,0.92)" }}>
-              {data ? formatDay(data.today, { weekday: "long", day: "numeric", month: "long" }) : " "}
+              {data
+                ? formatDay(data.today, { weekday: "long", day: "numeric", month: "long" })
+                : new Date().toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long" })}
             </Text>
           </Box>
 
           {isLoading && <Center py="xl"><Loader /></Center>}
+
+          {!viewerLoading && !viewer && <LoginCard />}
 
           {isError && (
             <Paper p="lg" withBorder style={{ borderColor: "var(--epi-border)" }}>
@@ -137,9 +195,18 @@ export function PublicGuardPage() {
             </>
           )}
 
-          <Text size="xs" c="dimmed" ta="center" style={{ fontFamily: MONO }}>
-            mis à jour automatiquement chaque minute
-          </Text>
+          {viewer && (
+            <Group justify="center" gap="xs">
+              <Text size="xs" c="dimmed" style={{ fontFamily: MONO }}>
+                {viewer.name} · mis à jour chaque minute
+              </Text>
+              {viewer.kind === "student" && (
+                <Anchor component="button" size="xs" c="dimmed" onClick={logout}>
+                  Se déconnecter
+                </Anchor>
+              )}
+            </Group>
+          )}
         </Stack>
       </Container>
     </Box>

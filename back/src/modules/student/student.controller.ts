@@ -1,8 +1,10 @@
 import { Elysia, t } from "elysia";
 import { prisma } from "@/db/prisma";
+import { httpStatus } from "@/lib/http";
+import { getGuardViewer } from "@/auth/viewer";
 
 /**
- * Routes publiques (sans session) destinées aux étudiants.
+ * Routes destinées aux étudiants : session étudiante (compte Microsoft Epitech) ou AER.
  * N'exposer ici que le strict nécessaire : pas d'email, pas d'absences ni d'indispos.
  */
 
@@ -32,7 +34,13 @@ export type PublicGuardDay = {
   schoolHolidayName: string | null;
 };
 
-export const publicController = new Elysia({ prefix: "/public" }).get(
+export const studentController = new Elysia({ prefix: "/student" })
+  .derive(async ({ cookie }) => {
+    const viewer = await getGuardViewer(cookie);
+    if (!viewer) throw httpStatus(401, { error: "Non authentifié" });
+    return { viewer };
+  })
+  .get(
   "/guards",
   async ({ query, set }) => {
     const days = Math.min(Math.max(Number(query.days ?? 7) || 7, 1), MAX_DAYS);
@@ -54,7 +62,7 @@ export const publicController = new Elysia({ prefix: "/public" }).get(
       },
     });
 
-    set.headers["Cache-Control"] = "public, max-age=60";
+    set.headers["Cache-Control"] = "private, max-age=60";
     return {
       today,
       days: guards.map(

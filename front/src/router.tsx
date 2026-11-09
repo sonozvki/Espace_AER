@@ -11,7 +11,7 @@ import { SuiviPage } from "@/routes/SuiviPage";
 import { StudentNotesPage } from "@/routes/StudentNotesPage";
 import { MoulisPage } from "@/routes/MoulisPage";
 import { SchoolYearPage } from "@/routes/SchoolYearPage";
-import { PublicGuardPage } from "@/routes/PublicGuardPage";
+import { GuardBoardPage } from "@/routes/GuardBoardPage";
 import { NotFoundPage } from "@/routes/NotFoundPage";
 import "@/styles/global.css";
 
@@ -21,9 +21,9 @@ export const router = createBrowserRouter([
     element: <LoginPage />,
   },
   {
-    // Page publique (étudiants) : pas de Layout, donc pas de redirection vers /login
+    // Page étudiants (connexion Microsoft Epitech) : hors Layout, qui est réservé aux AER
     path: "/garde",
-    element: <PublicGuardPage />,
+    element: <GuardBoardPage />,
   },
   {
     path: "/",
