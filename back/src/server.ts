@@ -8,6 +8,7 @@ import { epitechController } from "@/modules/epitech/epitech.controller";
 import { statsController } from "@/modules/stats/stats.controller";
 import { moulisController } from "@/modules/moulis/moulis.controller";
 import { schoolYearController } from "@/modules/school-year/school-year.controller";
+import { publicController } from "@/modules/public/public.controller";
 import { startStudentSyncJob } from "@/jobs/sync-students";
 
 export const app = new Elysia()
@@ -27,6 +28,7 @@ export const app = new Elysia()
       .use(statsController)
       .use(moulisController)
       .use(schoolYearController)
+      .use(publicController) // sans authentification
   )
   .listen(process.env["PORT"] ?? 3000);
 

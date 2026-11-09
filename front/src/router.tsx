@@ -11,6 +11,7 @@ import { SuiviPage } from "@/routes/SuiviPage";
 import { StudentNotesPage } from "@/routes/StudentNotesPage";
 import { MoulisPage } from "@/routes/MoulisPage";
 import { SchoolYearPage } from "@/routes/SchoolYearPage";
+import { PublicGuardPage } from "@/routes/PublicGuardPage";
 import { NotFoundPage } from "@/routes/NotFoundPage";
 import "@/styles/global.css";
 
@@ -18,6 +19,11 @@ export const router = createBrowserRouter([
   {
     path: "/login",
     element: <LoginPage />,
+  },
+  {
+    // Page publique (étudiants) : pas de Layout, donc pas de redirection vers /login
+    path: "/garde",
+    element: <PublicGuardPage />,
   },
   {
     path: "/",
