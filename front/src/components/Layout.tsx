@@ -11,6 +11,7 @@ const BASE_NAV_ITEMS = [
   { path: "/guards", label: "Gardes" },
   { path: "/toolbox", label: "Toolbox" },
   { path: "/suivi", label: "Trombi" },
+  { path: "/moulis", label: "Moulis" },
   { path: "/annee", label: "Année & équipe" },
   { path: "/whitelist", label: "Whitelist" },
   { path: "/settings", label: "Mon compte" },
@@ -71,11 +72,7 @@ export function Layout() {
       </AppShell.Header>
 
       <AppShell.Navbar p="xs" bg="var(--epi-panel)" style={{ borderRight: "1px solid var(--epi-border)" }}>
-        {[
-          ...BASE_NAV_ITEMS.slice(0, 5),
-          ...(user?.hasEpitechToken ? [{ path: "/moulis", label: "Moulis" }] : []),
-          ...BASE_NAV_ITEMS.slice(5),
-        ].map((item) => (
+        {BASE_NAV_ITEMS.map((item) => (
           <NavLink
             key={item.path}
             label={item.label}
