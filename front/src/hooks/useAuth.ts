@@ -7,6 +7,12 @@ export type AuthUser = {
   name: string;
   role: "ADMIN";
   hasEpitechToken: boolean;
+  aerSince: number | null;
+  aerRole: "tek2" | "tek3" | "tek5" | "ancien";
+  /** false pour un ancien AER : plus de stats */
+  isActiveAer: boolean;
+  /** seuls les tek2/tek3 prennent des gardes (pas les tek5 ni les anciens) */
+  canTakeGuards: boolean;
 };
 
 export function useAuth() {

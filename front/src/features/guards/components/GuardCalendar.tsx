@@ -156,7 +156,8 @@ function DayCell({ day, guard, currentUser }: DayCellProps) {
             </Tooltip>
           ))}
 
-          {!past && currentUser && (
+          {/* Les tek5 et anciens AER ne font pas de gardes : aucune action */}
+          {!past && currentUser && currentUser.canTakeGuards !== false && (
             <Group gap={6} mt="auto" wrap="wrap">
               {isFree && !myAbsence && !myUnavailability && (
                 <Button

@@ -37,6 +37,8 @@ export const guardsController = new Elysia({ prefix: "/guards" })
         return httpStatus(422, { error: "Impossible de modifier une garde passée" });
       if (err instanceof Error && err.message === "NOT_FOUND")
         return httpStatus(404, { error: "Garde introuvable" });
+      if (err instanceof Error && err.message === "INACTIVE_AER")
+        return httpStatus(422, { error: "Cet AER ne prend pas de gardes (ancien AER ou AER tek5)" });
       throw err;
     }
   }, { params: t.Object({ id: t.String() }), body: t.Any() })

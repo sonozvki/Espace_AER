@@ -1,13 +1,25 @@
 import { prisma } from "@/db/prisma";
 import { decrypt } from "@/lib/crypto";
-import { schoolYear } from "@/lib/dates";
+import { isoDay } from "@/lib/dates";
 import { getUserCookie, fetchIntra, EpitechTokenMissingError } from "@/modules/epitech/epitech.service";
+import { getSchoolYearBounds, activeAerWhere, guardAerWhere } from "@/modules/school-year/school-year.service";
 
-function schoolYearBounds() {
-  const year = schoolYear();
+/**
+ * Bornes et AER concernés pour une année scolaire (courante par défaut).
+ * Les AER sortis de la FIFO n'apparaissent plus dans les stats de l'année courante,
+ * mais restent visibles dans les stats des années où ils étaient actifs.
+ */
+async function statsScope(year?: number) {
+  const bounds = await getSchoolYearBounds(year);
+  const end = bounds.end ?? new Date();
   return {
-    start: new Date(`${year}-09-25T00:00:00.000Z`),
-    end: new Date(`${year + 1}-09-24T23:59:59.999Z`),
+    start: bounds.start,
+    end,
+    startDay: isoDay(bounds.start),
+    endDay: isoDay(end < new Date() ? end : new Date()),
+    userWhere: activeAerWhere(bounds.year),
+    // Les tek5 ne font pas de gardes : absents des stats de gardes
+    guardUserWhere: guardAerWhere(bounds.year),
   };
 }
 
@@ -25,10 +37,11 @@ export type GuardStat = {
   count: number;
 };
 
-export async function getGuardStats(): Promise<GuardStat[]> {
-  const { start, end } = schoolYearBounds();
+export async function getGuardStats(year?: number): Promise<GuardStat[]> {
+  const { start, end, guardUserWhere } = await statsScope(year);
 
   const users = await prisma.user.findMany({
+    where: guardUserWhere,
     select: { id: true, name: true, email: true },
   });
 
@@ -62,10 +75,8 @@ export type AerNetsoulStat = {
   totalHours: number | null;
 };
 
-export async function getAerNetsoulStats(requestingUserId: number): Promise<AerNetsoulStat[]> {
-  const year = schoolYear();
-  const start = `${year}-09-25`;
-  const end = new Date().toISOString().slice(0, 10);
+export async function getAerNetsoulStats(requestingUserId: number, year?: number): Promise<AerNetsoulStat[]> {
+  const { startDay: start, endDay: end, userWhere } = await statsScope(year);
 
   let cookie: string;
   try {
@@ -75,6 +86,7 @@ export async function getAerNetsoulStats(requestingUserId: number): Promise<AerN
   }
 
   const users = await prisma.user.findMany({
+    where: userWhere,
     select: { id: true, name: true, email: true },
   });
 
@@ -122,12 +134,11 @@ type RawEvent = {
   status_manager?: string | null;
 };
 
-export async function getAerActivityStats(): Promise<AerActivityStat[]> {
-  const year = schoolYear();
-  const start = `${year}-09-25`;
-  const end = new Date().toISOString().slice(0, 10);
+export async function getAerActivityStats(year?: number): Promise<AerActivityStat[]> {
+  const { startDay: start, endDay: end, userWhere } = await statsScope(year);
 
   const users = await prisma.user.findMany({
+    where: userWhere,
     select: { id: true, name: true, email: true, epitechToken: true },
   });
 

@@ -7,6 +7,7 @@ import {
   getGroupSummaries,
   getGroupDetail,
   getGroupTrend,
+  getGroupArtifact,
   triggerAll,
   triggerGroup,
 } from "./moulis.service";
@@ -59,6 +60,35 @@ export const moulisController = new Elysia({ prefix: "/moulis" })
       getGroupTrend(query.module, query.project, params.group, query.limit ? Number(query.limit) : 20),
     {
       query: t.Object({ module: t.String(), project: t.String(), limit: t.Optional(t.String()) }),
+      params: t.Object({ group: t.String() }),
+    }
+  )
+
+  .get(
+    "/groups/:group/artifact",
+    async ({ query, params }) => {
+      const build = Number(query.build);
+      if (!Number.isInteger(build) || build <= 0) throw httpStatus(400, { error: "Build invalide" });
+      const file = await getGroupArtifact(query.module, query.project, params.group, build, query.path);
+      if (!file) throw httpStatus(404, { error: "Fichier introuvable" });
+      const disposition = query.download === "1" ? "attachment" : "inline";
+      return new Response(file.body, {
+        headers: {
+          "Content-Type": file.contentType,
+          "Content-Disposition": `${disposition}; filename*=UTF-8''${encodeURIComponent(file.fileName)}`,
+          "X-Content-Type-Options": "nosniff",
+          "Cache-Control": "private, max-age=300",
+        },
+      });
+    },
+    {
+      query: t.Object({
+        module: t.String(),
+        project: t.String(),
+        build: t.String(),
+        path: t.String(),
+        download: t.Optional(t.String()),
+      }),
       params: t.Object({ group: t.String() }),
     }
   )

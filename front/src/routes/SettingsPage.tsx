@@ -2,7 +2,7 @@ import { useState } from "react";
 import {
   Stack, Title, Paper, Text, Group, Button, PasswordInput, Badge,
   ThemeIcon, List, Divider, Anchor, Code, Tabs, Box, Progress, Loader, Center,
-  Collapse, ActionIcon, Alert,
+  Collapse, ActionIcon, Alert, Select,
 } from "@mantine/core";
 import {
   IconBrandOffice, IconCheck, IconTrash, IconChartBar, IconKey,
@@ -12,6 +12,8 @@ import { useAuth } from "@/hooks/useAuth";
 import { useSetEpitechToken, useClearEpitechToken } from "@/features/account/hooks";
 import { useGuardStats, useAerNetsoulStats, useAerActivityStats } from "@/features/stats/hooks";
 import type { AerActivityStat } from "@/features/stats/api";
+import { useSchoolYear } from "@/features/school-year/hooks";
+import { yearLabel } from "@/features/school-year/api";
 
 const MONO = '"IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace';
 
@@ -84,9 +86,19 @@ export function SettingsPage() {
   const { user } = useAuth();
   const setToken = useSetEpitechToken();
   const clearToken = useClearEpitechToken();
-  const { data: guardStats, isLoading: guardStatsLoading } = useGuardStats();
-  const { data: netsoulStats, isLoading: netsoulLoading } = useAerNetsoulStats();
-  const { data: activityStats, isLoading: activityLoading } = useAerActivityStats();
+  const { data: schoolYear } = useSchoolYear();
+  // null = année courante ; sinon une année passée (historique, AER de l'époque inclus)
+  const [statsYear, setStatsYear] = useState<number | null>(null);
+  const yearParam = statsYear ?? undefined;
+  const { data: guardStats, isLoading: guardStatsLoading } = useGuardStats(yearParam);
+  const { data: netsoulStats, isLoading: netsoulLoading } = useAerNetsoulStats(yearParam);
+  const { data: activityStats, isLoading: activityLoading } = useAerActivityStats(yearParam);
+
+  const selectedYear = schoolYear?.years.find((y) => y.year === (statsYear ?? schoolYear.current.year));
+  const sinceLabel = selectedYear
+    ? `depuis le ${new Date(selectedYear.startDate).toLocaleDateString("fr-FR", { day: "numeric", month: "short", timeZone: "UTC" })}`
+    : "";
+  const periodLabel = statsYear === null ? `Année scolaire en cours (${sinceLabel})` : `Année ${yearLabel(statsYear)}`;
 
   const [token, setTokenValue] = useState("");
   const hasToken = user?.hasEpitechToken ?? false;
@@ -115,6 +127,23 @@ export function SettingsPage() {
         {/* ── Statistiques ────────────────────────────────────────── */}
         <Tabs.Panel value="stats" pt="md">
           <Stack gap="md">
+            {schoolYear && schoolYear.years.length > 1 && (
+              <Select
+                label="Année scolaire"
+                w={220}
+                allowDeselect={false}
+                value={String(statsYear ?? schoolYear.current.year)}
+                onChange={(v) => {
+                  if (!v) return;
+                  const y = Number(v);
+                  setStatsYear(y === schoolYear.current.year ? null : y);
+                }}
+                data={schoolYear.years.map((y) => ({
+                  value: String(y.year),
+                  label: y.year === schoolYear.current.year ? `${yearLabel(y.year)} (en cours)` : yearLabel(y.year),
+                }))}
+              />
+            )}
 
             {/* Gardes */}
             <Paper p="lg" withBorder style={{ borderColor: "var(--epi-border)" }}>
@@ -122,7 +151,7 @@ export function SettingsPage() {
                 <ThemeIcon variant="light" color="epitech"><IconChartBar size={16} /></ThemeIcon>
                 <div>
                   <Text fw={700} size="lg" ff="Anton, sans-serif">Gardes par AER</Text>
-                  <Text size="sm" c="dimmed">Année scolaire en cours (depuis le 25 sept.)</Text>
+                  <Text size="sm" c="dimmed">{periodLabel}</Text>
                 </div>
               </Group>
               <Divider mb="md" />
@@ -171,7 +200,7 @@ export function SettingsPage() {
                 <ThemeIcon variant="light" color="blue"><IconClock size={16} /></ThemeIcon>
                 <div>
                   <Text fw={700} size="lg" ff="Anton, sans-serif">Logtime Netsoul</Text>
-                  <Text size="sm" c="dimmed">Heures actives sur l'intra depuis le 25 sept.</Text>
+                  <Text size="sm" c="dimmed">Heures actives sur l'intra · {statsYear === null ? sinceLabel : yearLabel(statsYear)}</Text>
                 </div>
               </Group>
               <Divider mb="md" />

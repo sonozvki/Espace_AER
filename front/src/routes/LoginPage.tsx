@@ -1,4 +1,5 @@
-import { Center, Button, Text, Stack } from "@mantine/core";
+import { Center, Button, Text, Stack, Anchor } from "@mantine/core";
+import { Link } from "react-router-dom";
 import { BASE_URL } from "@/lib/api";
 
 export function LoginPage() {
@@ -11,6 +12,9 @@ export function LoginPage() {
         <Button component="a" href={`${BASE_URL}/auth/login`}>
           Se connecter avec Microsoft
         </Button>
+        <Anchor component={Link} to="/garde" size="sm" c="dimmed">
+          Étudiant ? Voir qui est de garde
+        </Anchor>
       </Stack>
     </Center>
   );
