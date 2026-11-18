@@ -11,7 +11,8 @@ function colIndex(date: Date): number {
   return dow === 0 ? 6 : dow - 1;
 }
 
-function buildWeeks(year: number, month: number): (Date | null)[][] {
+/** Semaines du mois (lundi → dimanche, dates UTC). Source unique pour la page et le calendrier. */
+export function buildWeeks(year: number, month: number): (Date | null)[][] {
   const firstDay = new Date(Date.UTC(year, month, 1));
   const lastDay = new Date(Date.UTC(year, month + 1, 0));
   const weeks: (Date | null)[][] = [];
